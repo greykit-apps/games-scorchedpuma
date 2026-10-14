@@ -1,0 +1,14 @@
+{
+  "name": "Scorched Puma",
+  "short_name": "Scorched Puma",
+  "description": "Artillery on a field of falling dirt: pumas against wolves, up to ten tanks, thirty-three weapons, wind, walls and trash talk. A remake of Scorched Earth, the 1991 DOS classic.",
+  "start_url": ".",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#05070f",
+  "theme_color": "#05070f",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" },
+    { "src": "apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
+  ]
+}

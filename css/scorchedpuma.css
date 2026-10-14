@@ -1,0 +1,135 @@
+/* Scorched Puma -- the page around the battlefield.
+ *
+ * Tactical tribe: css/gk-tokens.css (canon, games-meta STANDARD.md §4) is
+ * the palette and is loaded first; no canon name is given another value
+ * here. The game's own names are --sp-*. The battlefield itself is pixel art
+ * on a canvas, scaled up crisp. */
+:root {
+  --sp-font: ui-monospace, Menlo, Consolas, "Courier New", monospace;
+  --sp-puma: #d8a25e;
+  --sp-wolf: #9aa4b4;
+  --sp-fire: #ff9a3c;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+[hidden] { display: none !important; }
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--sp-font); font-size: 13px; }
+body { overflow: hidden; -webkit-text-size-adjust: 100%; }
+button, input, select { font: inherit; color: inherit; }
+button { background: var(--panel); border: 1px solid var(--line); border-radius: 2px; cursor: pointer; padding: 6px 10px; }
+button:hover:not(:disabled) { border-color: var(--lit); background: var(--panel2); }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+button:disabled { opacity: .5; cursor: default; }
+button.on { color: var(--bg); background: var(--accent); border-color: var(--accent); font-weight: 600; }
+button.on:hover:not(:disabled) { background: #8af6ff; border-color: #8af6ff; }
+button.primary { color: var(--bg); background: var(--accent); border-color: var(--accent); font-weight: 600; letter-spacing: .08em; }
+button.primary:hover:not(:disabled) { background: #8af6ff; border-color: #8af6ff; }
+button.primary kbd { color: var(--bg); border-color: rgba(5, 7, 15, .35); }
+button.danger { border-color: var(--danger); color: var(--danger); }
+kbd { font: inherit; font-size: 10px; color: var(--dim); border: 1px solid var(--line); border-radius: 2px; padding: 0 4px; min-width: 16px; text-align: center; display: inline-block; }
+a { color: var(--steel); }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.px { image-rendering: pixelated; }
+
+/* ---- the game: the HUD over the field ---- */
+#game { position: fixed; inset: 0; display: flex; flex-direction: column; }
+#hud { display: flex; align-items: center; gap: 6px 12px; flex-wrap: wrap; padding: 6px 12px; min-height: 46px;
+  background: var(--panel); border-bottom: 1px solid var(--line); }
+#hud .who { display: flex; align-items: center; gap: 7px; min-width: 150px; }
+#hud .sw { width: 14px; height: 14px; border-radius: 2px; flex: none; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .4); }
+#hud .who b { font-size: 14px; color: var(--text); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 12ch; }
+#hud .side { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; }
+#hud .side.puma { color: var(--sp-puma); }
+#hud .side.wolf { color: var(--sp-wolf); }
+#hud .hp { width: 40px; height: 6px; background: var(--bg); border: 1px solid var(--line); border-radius: 1px; flex: none; }
+#hud .hp i { display: block; height: 100%; background: var(--good); }
+#hud .hp i.mid { background: var(--warn); }
+#hud .hp i.low { background: var(--danger); }
+.rd { display: flex; align-items: baseline; gap: 6px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.rd .k { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
+.rd b { font-size: 17px; font-weight: 600; color: var(--accent); min-width: 3ch; text-align: right; }
+.rd small { color: var(--dim); font-size: 11px; }
+#h-power b { min-width: 4ch; }
+#h-weapon { display: flex; align-items: center; gap: 8px; min-width: 150px; justify-content: space-between; padding: 5px 9px; }
+#h-items { padding: 5px 9px; }
+#h-weapon .n { color: var(--text); font-weight: 600; }
+#h-weapon .c { color: var(--dim); font-variant-numeric: tabular-nums; }
+#h-items .armed { color: var(--accent); font-size: 11px; margin-left: 4px; }
+#h-wind b { min-width: 5ch; }
+#h-wind b.calm { color: var(--dim); }
+#hud .spacer { flex: 1; }
+#h-cash { color: var(--good); font-variant-numeric: tabular-nums; white-space: nowrap; }
+#h-round { color: var(--dim); font-size: 11px; letter-spacing: .1em; white-space: nowrap; }
+#h-fire { min-width: 96px; padding: 5px 10px; }
+/* narrower than a laptop: the round and the key hints go, so the bar stays one row */
+@media (max-width: 1180px) { #h-round, #hud kbd { display: none; } #hud .side { display: none; } }
+#h-state { color: var(--warn); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; white-space: nowrap; }
+#hud .ico { padding: 4px 7px; line-height: 0; }
+#snd .off, #snd.muted .on { display: none; }
+#snd.muted .off { display: inline; }
+
+#stage { flex: 1; min-height: 0; position: relative; display: grid; place-items: center; background: #000; }
+#field { display: block; image-rendering: pixelated; image-rendering: crisp-edges; cursor: crosshair; touch-action: none; }
+#banner { position: absolute; top: 18px; left: 50%; transform: translateX(-50%); padding: 7px 16px; pointer-events: none;
+  background: rgba(5, 7, 15, .86); border: 1px solid var(--lit); border-radius: 2px; color: var(--text);
+  letter-spacing: .18em; text-transform: uppercase; font-size: 13px; white-space: nowrap; opacity: 0; transition: opacity .25s; }
+#banner.on { opacity: 1; }
+#banner b { color: var(--accent); font-weight: 600; }
+@media (prefers-reduced-motion: reduce) { #banner { transition: none; } }
+
+/* ---- the title: the canon block's screen, the attract mode behind it ---- */
+#title { position: fixed; inset: 0; z-index: 90; overflow-y: auto; }
+body.on-title #game { visibility: hidden; }
+.gk-title > .scene canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; }
+.gk-title .gk-sub { margin-top: 10px; color: var(--ink); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; text-align: center; }
+.gk-title .gk-sub .p { color: var(--sp-puma); }
+.gk-title .gk-sub .w { color: var(--sp-wolf); }
+
+/* ---- sheets: Settings, Help, the shop and the rest, over the game or the title ---- */
+body > .gk-sheet { z-index: 100; }
+.gk-sheet .gk-box.wide { width: min(860px, 100%); }
+.gk-sheet .gk-head button[data-x] { padding: 2px 8px; font-size: 16px; line-height: 1; }
+.gk-sheet .gk-tabs button { font-size: 12px; }
+.gk-sheet .gk-tabs button[aria-selected="true"] { border-color: var(--accent); color: var(--accent); }
+.gk-sheet .gk-body .row { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 10px; align-items: center; }
+.gk-sheet .gk-body .row button { font-size: 12px; }
+.gk-sheet .gk-foot { display: flex; gap: 8px; align-items: center; padding: 12px 18px; border-top: 1px solid var(--line); }
+.gk-sheet .gk-foot .grow { flex: 1; color: var(--ink); font-size: 12px; }
+.gk-sheet table.list { width: 100%; border-collapse: collapse; }
+.gk-sheet table.list th { text-align: left; font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--dim); font-weight: 600; padding: 4px 8px 6px 0; border-bottom: 1px solid var(--line); }
+.gk-sheet table.list td { padding: 5px 8px 5px 0; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.gk-sheet table.list td.n, .gk-sheet table.list th.n { text-align: right; font-variant-numeric: tabular-nums; }
+.gk-sheet table.list tr.dim td { color: var(--dim); }
+.gk-sheet table.list td .d { display: block; color: var(--dim); font-size: 11px; line-height: 1.35; }
+.gk-sheet table.list td button { padding: 3px 9px; font-size: 12px; }
+.gk-sheet .cash { color: var(--good); font-weight: 600; font-variant-numeric: tabular-nums; }
+.gk-sheet .sw { display: inline-block; width: 12px; height: 12px; border-radius: 2px; vertical-align: -1px; margin-right: 6px; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .4); }
+.gk-sheet .puma { color: var(--sp-puma); }
+.gk-sheet .wolf { color: var(--sp-wolf); }
+.gk-sheet .win { color: var(--good); }
+.gk-sheet .lose { color: var(--danger); }
+.gk-sheet .big { font-size: 18px; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); margin: 0 0 8px; }
+
+/* the custom game's player rows */
+.players { display: flex; flex-direction: column; gap: 6px; margin: 0 0 10px; }
+.player { display: grid; grid-template-columns: 14px minmax(0, 1fr) auto auto auto; gap: 8px; align-items: center; }
+.player input[type=text] { width: 100%; padding: 5px 8px; background: var(--bg); border: 1px solid var(--line); border-radius: 2px; }
+.player select { padding: 5px 6px; background: var(--bg); border: 1px solid var(--line); border-radius: 2px; }
+.player .seg { display: flex; }
+.player .seg button { padding: 5px 9px; font-size: 12px; border-radius: 0; }
+.player .seg button + button { border-left: none; }
+.player .x { padding: 3px 8px; }
+.opt { display: grid; grid-template-columns: 150px 1fr; gap: 6px 12px; align-items: center; margin: 0 0 8px; }
+.opt > span { color: var(--ink); font-size: 12px; }
+.opt .row { margin: 0; }
+
+/* ---- the small-screen note ---- */
+#small { display: none; }
+@media (max-width: 759px), (max-height: 479px) {
+  #game, #title, .gk-boot { display: none !important; }
+  #small { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 24px; text-align: center; line-height: 1.6; }
+  #small h1 { font-size: 16px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
+  #small p { color: var(--ink); max-width: 36ch; }
+  #small .gk-credit { color: var(--dim); font-size: 12px; }
+}
+.gk-credit { color: var(--dim); }
+.gk-credit a { color: var(--steel); }

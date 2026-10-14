@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Scorched Puma — Pumas vs. Wolves</title>
+<meta name="description" content="Artillery on a field of falling dirt: pumas against wolves, up to ten tanks, thirty-three weapons, wind, walls and trash talk. A remake of Scorched Earth, the 1991 DOS classic.">
+<meta name="theme-color" content="#05070f">
+<meta name="color-scheme" content="dark">
+<meta name="referrer" content="no-referrer">
+<meta property="og:title" content="Scorched Puma">
+<meta property="og:description" content="Artillery on a field of falling dirt: pumas against wolves, up to ten tanks, thirty-three weapons, wind, walls and trash talk. A remake of Scorched Earth, the 1991 DOS classic.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://greykit.com/games/scorchedpuma/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Artillery on a field of falling dirt: pumas against wolves, up to ten tanks, thirty-three weapons, wind, walls and trash talk. A remake of Scorched Earth, the 1991 DOS classic.">
+<meta property="og:url" content="https://greykit.com/games/scorchedpuma/">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Scorched Puma">
+<meta name="twitter:description" content="Artillery on a field of falling dirt: pumas against wolves, up to ten tanks, thirty-three weapons, wind, walls and trash talk. A remake of Scorched Earth, the 1991 DOS classic.">
+<meta name="twitter:image" content="https://greykit.com/games/scorchedpuma/og.png">
+<meta name="twitter:image:alt" content="Artillery on a field of falling dirt: pumas against wolves, up to ten tanks, thirty-three weapons, wind, walls and trash talk. A remake of Scorched Earth, the 1991 DOS classic.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+<link rel="icon" href="favicon.ico" sizes="16x16 32x32 48x48">
+<link rel="stylesheet" href="css/gk-tokens.css?v=7c37e1f9">
+<link rel="stylesheet" href="css/scorchedpuma.css?v=f83ef96e">
+</head>
+<body>
+<div id="game" hidden>
+  <header id="hud">
+    <div class="who"><span class="sw" id="h-sw"></span><b id="h-name"></b><span class="side" id="h-side"></span><span class="hp" title="Health: a tank fires no harder than ten times what it has left"><i id="h-hp"></i></span></div>
+    <div class="rd" id="h-angle"><span class="k">Angle</span><b>90</b></div>
+    <div class="rd" id="h-power"><span class="k">Power</span><b>500</b><small>/1000</small></div>
+    <button id="h-weapon" title="Weapon (Tab)"><span class="n"></span><span class="c"></span></button>
+    <button id="h-items" title="Items (I)">Items <kbd>I</kbd><span class="armed"></span></button>
+    <div class="rd" id="h-wind"><span class="k">Wind</span><b>0</b></div>
+    <span id="h-state"></span>
+    <span class="spacer"></span>
+    <span id="h-cash"></span>
+    <span id="h-round"></span>
+    <button id="h-fire" class="primary">Fire <kbd>Space</kbd></button>
+    <button id="snd" class="ico" aria-label="Sound" aria-pressed="true" title="Sound (M)"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M2 6h3l4-3v10l-4-3H2z" fill="currentColor"/><path class="on" d="M11 5.5c1.2 1.4 1.2 3.6 0 5M12.8 3.8c2.1 2.4 2.1 6 0 8.4" stroke="currentColor" stroke-width="1.4" fill="none"/><path class="off" d="M11 5.5l4 5M15 5.5l-4 5" stroke="currentColor" stroke-width="1.4"/></svg></button>
+    <button id="pausebtn" class="ico" aria-label="Pause" title="Pause (Esc)"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><rect x="4" y="3" width="3" height="10" fill="currentColor"/><rect x="9" y="3" width="3" height="10" fill="currentColor"/></svg></button>
+  </header>
+  <div id="stage">
+    <canvas id="field" width="640" height="360" aria-label="Scorched Puma: the battlefield"></canvas>
+    <div id="banner" aria-hidden="true"></div>
+  </div>
+  <div id="live" class="sr" aria-live="polite"></div>
+</div>
+<div id="title" hidden></div>
+<div id="small" role="dialog" aria-labelledby="small-h">
+  <img class="px" src="icon.svg" width="96" height="96" alt="">
+  <h1 id="small-h">Scorched Puma is built for a desktop</h1>
+  <p>Ten tanks around one keyboard need a bigger screen than this. Come back on a computer.</p>
+  <p class="gk-credit">Built by <a href="https://greykit.com/" target="_blank" rel="noopener">greykit.com</a></p>
+</div>
+<script src="js/gk-title.js?v=6080c669"></script>
+<script src="js/util.js?v=75fb9f48"></script>
+<script src="js/engine/const.js?v=8f87c7b8"></script>
+<script src="js/engine/terrain.js?v=b92c644f"></script>
+<script src="js/engine/tanks.js?v=e92f83f3"></script>
+<script src="js/engine/physics.js?v=668d80b9"></script>
+<script src="js/engine/weapons.js?v=689f1d68"></script>
+<script src="js/engine/economy.js?v=8787c5af"></script>
+<script src="js/engine/ai.js?v=f3030ba4"></script>
+<script src="js/engine/game.js?v=de2faeb4"></script>
+<script src="js/pixfont.js?v=bde400e8"></script>
+<script src="js/art.js?v=8002813e"></script>
+<script src="js/render.js?v=7d1eabbd"></script>
+<script src="js/sfx.js?v=44f88155"></script>
+<script src="js/talk.js?v=e6aa307e"></script>
+<script src="js/input.js?v=08cd018d"></script>
+<script src="js/hud.js?v=499c832c"></script>
+<script src="js/screens.js?v=adac7292"></script>
+<script src="js/main.js?v=d04187f4"></script>
+</body>
+</html>
