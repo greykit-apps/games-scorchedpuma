@@ -59,6 +59,16 @@ a { color: var(--steel); }
 .c-who .hp i.low { background: var(--danger); }
 .c-sub { justify-content: space-between; font-size: 12px; font-variant-numeric: tabular-nums; }
 #c-cash { color: var(--good); font-weight: 600; }
+/* driving: a line of its own under the tank, lit while F has it driving */
+.c-drive { gap: 4px; font-size: 12px; }
+.c-drive .k { flex: none; }
+#c-fuel { flex: 1; min-width: 0; color: var(--text); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#c-fuel.dim { color: var(--dim); }
+#c-fuel .short { display: none; }
+.c-drive button { width: 22px; height: 20px; padding: 0; font-size: 11px; line-height: 1; color: var(--text); flex: none; }
+.c-drive button[aria-disabled="true"] { color: var(--dim); }
+.c-drive button:active:not(:disabled):not([aria-disabled="true"]), .c-drive.on button { border-color: var(--accent); }
+.c-drive.on .k { color: var(--accent); }
 #c-score { color: var(--text); }
 #c-round { flex: 1; color: var(--ink); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; }
 /* angle and power: big readouts with steppers, the last shot under them */
@@ -124,7 +134,7 @@ a { color: var(--steel); }
 .ib.passive .tag { background: var(--steel); }
 .ib.off img { opacity: .45; }
 .ib.off .tag { background: var(--line); color: var(--ink); }
-#console.idle .strip, #console.idle .dial, #console.idle .c-last { opacity: .7; }
+#console.idle .strip, #console.idle .dial, #console.idle .c-last, #console.idle .c-drive { opacity: .7; }
 /* fire, sound, pause */
 .c-act { flex: 0 0 192px; }
 #c-fire { height: 48px; font-size: 16px; letter-spacing: .14em; text-transform: uppercase; }
@@ -137,7 +147,7 @@ a { color: var(--steel); }
 #snd .off, #snd.muted .on { display: none; }
 #snd.muted .off { display: inline; }
 /* a narrower desktop: the key hints and the faction tag go first */
-@media (max-width: 1240px) { #console kbd, #console .side { display: none; } .c-who { flex-basis: 150px; } .c-wind { flex-basis: 96px; } .dial { min-width: 140px; } .c-act { flex-basis: 170px; } }
+@media (max-width: 1240px) { #console kbd, #console .side { display: none; } .c-who { flex-basis: 160px; } #c-fuel .long { display: none; } #c-fuel .short { display: inline; } .c-wind { flex-basis: 96px; } .dial { min-width: 140px; } .c-act { flex-basis: 170px; } }
 
 #stage { flex: 1; min-height: 0; position: relative; display: grid; place-items: center; background: var(--bg); }
 /* an edge for the field, so a black sky never runs into the bars beside it */
