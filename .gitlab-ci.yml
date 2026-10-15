@@ -69,7 +69,7 @@ deploy:
     # PRODUCT.md, DESIGN.md, .impeccable/ and .impeccable.md are design notes
     # the impeccable skill writes into the repo root (games-meta STANDARD.md
     # §12). They stay in the repo and off the live site.
-    - puma_rsync -avz --delete --exclude='.git' --exclude='.claude' --exclude='PRODUCT.md' --exclude='DESIGN.md' --exclude='.impeccable' --exclude='.impeccable.md' --exclude='.gitlab-ci.yml' --exclude='tools' ./ ${DREAMHOST_USERNAME}@${DREAMHOST_HOST}:/home/${DREAMHOST_USERNAME}/greykit.com/games/scorchedpuma/
+    - puma_rsync -avz --delete --exclude='.git' --exclude='.claude' --exclude='PRODUCT.md' --exclude='DESIGN.md' --exclude='.impeccable' --exclude='.impeccable.md' --exclude='.gitlab-ci.yml' --exclude='tools' --exclude='screenshots' ./ ${DREAMHOST_USERNAME}@${DREAMHOST_HOST}:/home/${DREAMHOST_USERNAME}/greykit.com/games/scorchedpuma/
   # environment: lets GitLab's "Prevent outdated deployment jobs" act on this
   # job, so a deploy from an older pipeline that starts after a newer one has
   # deployed fails instead of republishing stale files. resource_group: runs
