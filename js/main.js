@@ -12,7 +12,9 @@
   /* games-meta STANDARD.md §5: every key starts with the game's name */
   const KEY_MATCH = "scorchedpuma_match_v1", KEY_SETUP = "scorchedpuma_setup_v1", KEY_PREFS = "scorchedpuma_prefs_v1";
   /* coached: the first-turn note has been shown and a shot fired after it */
-  const prefs = { talk: "sometimes", aim: false, speed: 2, coached: false, ...SP.store.get(KEY_PREFS, {}) };
+  /* weak: 1.5's rule that damage weakens a tank's shots (SP.RULES.weaken); off unless switched on */
+  const prefs = { talk: "sometimes", aim: false, speed: 2, coached: false, weak: false, ...SP.store.get(KEY_PREFS, {}) };
+  SP.RULES.weaken = prefs.weak;
   let muted = false;
   try { muted = localStorage.getItem("scorchedpuma_muted_v1") === "1"; } catch (e) { /* no storage */ }
   SP.Sfx.muted = muted;
@@ -60,6 +62,11 @@
     if (key === "talk") prefs.talk = val;
     if (key === "aim") prefs.aim = val === "1";
     if (key === "speed") prefs.speed = +val;
+    if (key === "weak") {
+      prefs.weak = SP.RULES.weaken = val === "1";
+      /* switched on mid-match: no tank keeps more power than it now may have */
+      if (game.s) for (const t of game.s.tanks) t.power = Math.min(t.power, SP.Tanks.maxPower(t));
+    }
     SP.store.set(KEY_PREFS, prefs);
   }
 

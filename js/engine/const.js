@@ -16,6 +16,10 @@
   SP.MAX_W = 1440;                  // a full-power shot carries about 1230 px on the level
   SP.H = 540;
   SP.HZ = 60;                       // engine steps a second
+  /* rules the page can switch for every tank at once. weaken: 1.5's rule
+     that a tank fires no harder than ten times the health it has left (the
+     engine defaults to 1.5; the page sets it from Settings) */
+  SP.RULES = { weaken: true };
 
   SP.PHYS = {
     g: 0.05 * K,                    // px / tick^2 at gravity 1.0

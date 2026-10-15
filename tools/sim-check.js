@@ -125,6 +125,9 @@ for (const w of SP.WEAPONS) {
   check("damage past a shield reaches the tank", b.health === 70 && !b.shield, `health ${b.health}`);
   check("damage to an enemy pays", a.cash === 15000 + 30 * SP.PAY.dmg, SP.money(a.cash));
   check("a damaged tank fires weaker", Tk.maxPower(b) === 700);
+  SP.RULES.weaken = false;
+  check("with the rule off, a damaged tank has full power", Tk.maxPower(b) === 1000);
+  SP.RULES.weaken = true;
   Tk.hurt(s, b, 500, a);
   check("a kill scores", a.score === 1 && a.kills === 1);
   check("a kill pays", a.cash === 15000 + 100 * SP.PAY.dmg + SP.PAY.kill, SP.money(a.cash));

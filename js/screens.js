@@ -127,11 +127,13 @@
     heat: "Your next shot homes in on the target once it is close.", ballistic: "Your next shot ignores the wind.",
     horz: "Your next shot levels off at the target's height and flies at it.", vert: "Your next shot drops straight down once it is over the target.",
     lazyboy: "Aims your turret at the target for you.", parachute: "Opens by itself when your tank falls.",
-    battery: "Ten health back, and so a hundred more power.", mag: "Pushes other tanks' shots away from you. Raise it on your turn.",
+    battery: "Ten health back.", mag: "Pushes other tanks' shots away from you. Raise it on your turn.",
     shield: "Soaks up 100 damage.", forceshield: "Soaks up 150, and turns shots aside.", heavyshield: "Soaks up 220 damage.",
     supermag: "A stronger, wider Mag Deflector.", autodefense: "Raises your best shield at the start of every round. Yours for good.",
     fuel: "Drive: F, then the arrows. 25 pixels a tank.", contact: "Rollers, diggers and sandhogs go off where they land.",
   };
+  /* with 1.5's rule on, a battery's health is power too */
+  Object.defineProperty(DESC, "battery", { enumerable: true, get: () => SP.RULES.weaken ? "Ten health back, and so a hundred more power." : "Ten health back." });
   UI.DESC = DESC;
   const sw = t => '<span class="sw" style="background:' + t.colour + '"></span>';
   const who = t => sw(t) + esc(t.name) + ' <span class="' + t.faction + '">' + SP.FACTIONS[t.faction].one + "</span>";
@@ -546,6 +548,9 @@
         <h3>Aim aid</h3>
         <div class="row">${pill(!prefs.aim, "Off", "aim:0")}${pill(prefs.aim, "On", "aim:1")}</div>
         <p class="gk-note">Off is 1991: you learn the arc. On draws the first stretch of your shot's path in still air. <kbd>L</kbd> switches it on the field.</p>
+        <h3>Damage weakens shots</h3>
+        <div class="row">${pill(!prefs.weak, "Off", "weak:0")}${pill(prefs.weak, "On", "weak:1")}</div>
+        <p class="gk-note">On is 1991: a tank fires no harder than ten times the health it has left, so a battery gives power back with the health. Off: every tank always has the full thousand, and batteries only heal. For every tank, the computer's too.</p>
         <h3>Sound</h3>
         <div class="row">${pill(!SP.Sfx.muted, "On", "mute:0")}${pill(SP.Sfx.muted, "Off", "mute:1")}</div>
         <p class="gk-note"><kbd>M</kbd> switches it anywhere; so does the speaker in the bar.</p>
@@ -582,7 +587,7 @@
         <li>Fire with <kbd>Space</kbd>. Gravity pulls the shell down and the <b>wind</b> pushes it.</li>
         <li>Read what happened: the line top left of the field, and a cross where it came down. <b>Aim again</b> (<kbd>A</kbd>) goes back to that aim, to correct from.</li></ol>
         <h3>The field</h3>
-        <p>Blasts dig craters and the dirt above them falls. Tanks fall too: a <b>parachute</b> saves a long drop. A tank fires no harder than ten times the health it has left; a <b>battery</b> gives some back.</p>
+        <p>Blasts dig craters and the dirt above them falls. Tanks fall too: a <b>parachute</b> saves a long drop. A <b>battery</b> gives back ten health.${SP.RULES.weaken ? " With <i>Damage weakens shots</i> on in Settings, a tank fires no harder than ten times the health it has left, so a battery is power too." : ""}</p>
         <h3>Money and score</h3>
         <p>Damage to an enemy pays, a kill pays more, surviving the round pays most; hurting yourself or your own side costs. Spend it between rounds at <b class="puma">Puma Arms</b> or <b class="wolf">Wolf Surplus</b>. The match goes to the best score: a point a kill, two for surviving a round, one off for an own goal.</p>
         <p class="gk-credit">${CREDIT}</p>`],

@@ -135,6 +135,7 @@
     set("name", $("c-name"), text, t.name);
     set("side", $("c-side"), (el, v) => { el.textContent = SP.FACTIONS[v].one; el.className = "side " + v; }, t.faction);
     const hp = Math.max(0, Math.round(t.health)), out = !t.alive || t.health <= 0;
+    set("hpt", $("c-hp").parentNode, (el, v) => { el.title = v ? "Health: a tank fires no harder than ten times what it has left" : "Health"; }, SP.RULES.weaken);
     set("hp", $("c-hp"), (el, v) => { el.style.width = v + "%"; el.className = v > 50 ? "" : v > 25 ? "mid" : "low"; }, hp);
     set("hpn", $("c-hpn"), (el, v) => { el.textContent = v; el.className = out ? "out" : ""; }, out ? "out" : String(hp));
     set("cash", $("c-cash"), text, SP.money(t.cash));
