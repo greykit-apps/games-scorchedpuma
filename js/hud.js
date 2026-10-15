@@ -1,7 +1,7 @@
 /* Scorched Puma -- the console under the field, the banner and the log.
  *
- * The console is yours: your tank, health, cash and score, your angle and
- * power with steppers, your last shot to correct from, the wind, your weapons
+ * The console is yours: your tank, health, cash and score, driving it on
+ * fuel, your angle and power with steppers, your last shot to correct from, the wind, your weapons
  * and items as icons to click. On a computer player's turn it stays yours,
  * dimmed, and the turn line says who is aiming. It is written from the match
  * state every frame, but only where something changed; its strips are
@@ -141,6 +141,16 @@
     set("cash", $("c-cash"), text, SP.money(t.cash));
     set("score", $("c-score"), text, "Score " + t.score);
     set("round", $("c-round"), text, `Round ${s.round}/${s.opts.rounds}`);
+    /* driving: always in view, so nobody has to find it; with no fuel a press says where to get some */
+    const fl = fuel(t);
+    set("drive", $("c-drive"), (el, v) => {
+      /* the short form is for a narrow console, where the stylesheet swaps it in */
+      $("c-fuel").innerHTML = fl > 0 ? fl + '<span class="long"> px</span>' : '<span class="long">no fuel</span><span class="short">none</span>';
+      $("c-fuel").className = fl > 0 ? "" : "dim";
+      el.classList.toggle("on", !!ui.drive);
+      el.title = fl > 0 ? "Hold ◀ ▶ to drive, or F and then ← →. Fuel is spent by the pixel, double uphill." : "Driving needs fuel: buy a Fuel Tank in the shop";
+      el.querySelectorAll("button").forEach(b => { b.disabled = !live; b.setAttribute("aria-disabled", String(fl <= 0)); });
+    }, [fl, live, ui.drive].join());
     set("angle", $("c-angle").querySelector(".v"), text, t.angle + "°");
     set("power", $("c-power").querySelector(".v"), text, String(t.power));
     set("maxp", $("c-power").querySelector(".max"), text, "/" + Tk.maxPower(t));
@@ -194,7 +204,27 @@
       else G.setAim(cb.state(), t.angle, t.power + n);
     };
     const stop = () => { if (hold) { clearTimeout(hold.t); clearInterval(hold.i); hold = null; } };
+    /* the drive buttons: a pixel a press, and held, the tank keeps rolling at the arrow keys' pace */
+    const drive = (b, held) => {
+      const t = cb.human();
+      if (!t) return stop();
+      if (Tk.fuelLeft(t) <= 0) {
+        stop();
+        if (!held) { H.banner("No fuel: buy a <b>Fuel Tank</b> in the shop", 1600); SP.Sfx.play("nope"); }
+        return;
+      }
+      Tk.drive(cb.state(), t, +b.dataset.drive);
+    };
     con.addEventListener("pointerdown", ev => {
+      const d = ev.target.closest("[data-drive]");
+      if (d) {
+        if (d.disabled) return;
+        ev.preventDefault();
+        stop();
+        drive(d, false);
+        hold = { t: 0, i: setInterval(() => drive(d, true), 50) };
+        return;
+      }
       const b = ev.target.closest("[data-step]");
       if (!b || b.disabled) return;
       ev.preventDefault();
@@ -220,6 +250,8 @@
     }
     con.addEventListener("click", ev => {
       const b = ev.target.closest("button");
+      /* a drive button from the keyboard: a short roll, since there is no holding it */
+      if (b && b.dataset.drive && !b.disabled && ev.detail === 0) { for (let i = 0; i < 8; i++) drive(b, i > 0); return; }
       if (!b || b.disabled || b.getAttribute("aria-disabled") === "true") return;
       const t = cb.human(), s = cb.state();
       /* a stepper pressed from the keyboard (detail 0) has no pointerdown: step here */

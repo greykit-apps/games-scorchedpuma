@@ -605,7 +605,7 @@
         [["F6"], "Into the console and back: there <kbd>Tab</kbd> moves and <kbd>Space</kbd> presses"],
         [["Esc", "P", "M", "?"], "Pause; <kbd>M</kbd> sound on or off; <kbd>?</kbd> this help"],
       ].map(([k, w]) => kbdRow(k, w)).join("") + "</table><p class=\"gk-note\">The mouse aims too: press anywhere on the field and the turret points there, with more power the further out you press; drag to fine-tune, and the wheel steps the power.</p>" +
-        "<p>Under the field, click a weapon to load it, an item to use it; hover for what it does.</p>"],
+        "<p>Under the field, click a weapon to load it, an item to use it; hover for what it does. With fuel, hold <b>◀ ▶</b> by Drive to move your tank.</p>"],
     ],
   });
 
