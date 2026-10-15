@@ -613,10 +613,8 @@
   });
 
   UI.about = () => UI.open("About", {
-    html: () => `<p><b>Scorched Puma</b> is a remake of <b>Scorched Earth</b>, "the mother of all games", by Wendell Hicken: shareware for DOS, 1991, version 1.5 in 1995. Up to ten tanks, a field of falling dirt, and the shop between rounds.</p>
-      <p>The tanks are crewed by pumas and wolves, and they do not get along.</p>
-      <p>Plain scripts, nothing fetched, nothing sent. Every picture is drawn and every sound made in the page. Developed with Claude Code.</p>
-      <p class="gk-note">Not affiliated with Wendell Hicken. No code, art, sound or text from the original is used.</p>
+    html: () => `<p><b>Scorched Puma</b> is a remake of <b>Scorched Earth</b> (1991), "The mother of all games", by Wendell Hicken. Specifically the 1.5 version released in 1995. To simply say the game was incredibly popular would gloss over the fact that this game was incredibly popular before the internet took off and before Windows had a Start button.</p>
+      <p>I hope I have done it justice.</p>
       <p class="gk-credit">${CREDIT}</p>`,
   });
 })();
