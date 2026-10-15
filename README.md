@@ -12,7 +12,7 @@ No install required. Plain scripts, no build step, nothing fetched at play time:
 
 Two to ten tanks on a hilly field, each one human or computer, each a **Puma** or a **Wolf**. Take turns: set the turret's **angle** and the shot's **power**, pick a weapon, fire. The **wind** in the bar pushes every shot; the **walls** at the sides may let shots out, wrap them round, bounce them back or blow them up.
 
-Blasts dig craters and the dirt above them falls. Tanks fall too: a **parachute** opens by itself, and without one a long drop hurts. A tank's health is also its strength, as in 1.5: it fires no harder than ten times the health it has left, and a **battery** gives some back. Destroyed tanks blow up where they stand, sometimes taking a neighbour with them.
+Blasts dig craters and the dirt above them falls. Tanks fall too: a **parachute** opens by itself, and without one a long drop hurts. A **battery** gives back ten health. Settings has 1.5's rule that a tank's health is also its strength (it fires no harder than ten times the health it has left, so a battery is power too); it is off unless switched on. Destroyed tanks blow up where they stand, sometimes taking a neighbour with them.
 
 Between rounds is the shop, **Puma Arms** or **Wolf Surplus** by who you are. Damage to an enemy pays, a kill pays more, surviving the round pays most, and cash in hand earns interest. The match is decided on score: a point a kill, two for surviving a round, a point off for killing your own side or yourself.
 

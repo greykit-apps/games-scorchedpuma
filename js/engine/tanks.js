@@ -1,8 +1,9 @@
 /* Scorched Puma -- tanks: where they sit, how they fall, what hurts them.
  *
  * A tank's (x, y) is the middle of its tracks and the row of dirt it sits on.
- * Its health is also its strength: as in 1.5, a tank can fire no harder than
- * ten times the health it has left. */
+ * With SP.RULES.weaken (1.5's rule) its health is also its strength: it can
+ * fire no harder than ten times the health it has left. Without, every
+ * living tank has the full thousand. */
 (() => {
   const SP = globalThis.SP, T = SP.Terrain, K = SP.TANK, KS = SP.K;
   const Tk = SP.Tanks = {};
@@ -46,7 +47,7 @@
     if (--t.inv[id] <= 0) delete t.inv[id];
     return true;
   };
-  Tk.maxPower = t => Math.max(0, Math.round(t.health * 10));
+  Tk.maxPower = t => t.health <= 0 ? 0 : SP.RULES.weaken ? Math.round(t.health * 10) : 1000;
   Tk.centre = t => ({ x: t.x, y: t.y - K.mid });
   Tk.muzzle = t => {
     const a = t.angle * Math.PI / 180;
