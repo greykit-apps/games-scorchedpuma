@@ -25,7 +25,7 @@ The game is 1.5's:
 
 Not in this version: 1.5's *Simultaneous* real-time mode, network play, and its choice of tank shapes.
 
-It plays with a keyboard and a mouse: <kbd>←</kbd> <kbd>→</kbd> turn the turret, <kbd>↑</kbd> <kbd>↓</kbd> set the power, <kbd>Space</kbd> fires, and <kbd>F</kbd> then the arrow keys drives the tank on fuel. Or press on the field to aim there and drag to fine-tune. <kbd>?</kbd> in the game lists every key.
+It plays with a keyboard and a mouse: <kbd>←</kbd> <kbd>→</kbd> turn the turret, <kbd>↑</kbd> <kbd>↓</kbd> set the power, <kbd>Space</kbd> fires. Or press on the field to aim there and drag to fine-tune. To drive, buy a Fuel Tank, then hold ◀ ▶ by Drive under your tank, or press <kbd>F</kbd> and use <kbd>←</kbd> <kbd>→</kbd>. <kbd>?</kbd> in the game lists every key.
 
 ## Run it locally
 
