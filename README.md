@@ -2,96 +2,88 @@
 
 **Artillery on a field of falling dirt, pumas against wolves.** A remake of *Scorched Earth* (Wendell Hicken, 1991, DOS; version 1.5, 1995), "the mother of all games", with every tank crewed by a puma or a wolf, and none of them polite about it.
 
-## Play
+Play it at [greykit.com/games/scorchedpuma](https://greykit.com/games/scorchedpuma/).
 
-[greykit.com/games/scorchedpuma](https://greykit.com/games/scorchedpuma/)
+![The title menu: New quick game, Custom game, Settings, Help and About over a snowy mountain field with tanks on the slopes](screenshots/title.png)
 
-No install required. Plain scripts, no build step, nothing fetched at play time: every picture is drawn and every sound made in the page. Built for a desktop: a keyboard and a mouse.
+![A match in progress: a crater beside a wolf's tank, a cross where the last shot came down, the shot log top left, and the console under the field with health, cash, angle, power, wind, weapons and items](screenshots/match.png)
 
-## How it plays
+![Puma Arms, the shop between rounds: weapons as cards with their prices, and the selected Missile's blast, damage and price on the right](screenshots/shop.png)
 
-Two to ten tanks on a hilly field, each one human or computer, each a **Puma** or a **Wolf**. Take turns: set the turret's **angle** and the shot's **power**, pick a weapon, fire. The **wind** in the bar pushes every shot; the **walls** at the sides may let shots out, wrap them round, bounce them back or blow them up.
+## What it is
 
-Blasts dig craters and the dirt above them falls. Tanks fall too: a **parachute** opens by itself, and without one a long drop hurts. A **battery** gives back ten health. Settings has 1.5's rule that a tank's health is also its strength (it fires no harder than ten times the health it has left, so a battery is power too); it is off unless switched on. Destroyed tanks blow up where they stand, sometimes taking a neighbour with them.
+A static site: one `index.html`, plain scripts and stylesheets, and a few icons. There is no build step, no server code and nothing fetched at play time; every picture is drawn and every sound made in the page.
 
-Between rounds is the shop, **Puma Arms** or **Wolf Surplus** by who you are. Damage to an enemy pays, a kill pays more, surviving the round pays most, and cash in hand earns interest. The match is decided on score: a point a kill, two for surviving a round, a point off for killing your own side or yourself.
+The game is 1.5's:
 
-The tanks talk. When they fire they tell the other species what they think of it (dogs, fleas, fetch, the pound; cats, hairballs, the litter box, nine lives), and when they go they say last words. Settings sets how often, or turns it off.
+- Two to ten tanks, each one human or computer, each a **Puma** or a **Wolf**. Take turns: set the angle and the power, pick a weapon, fire. Wind pushes every shot, blasts dig craters, and the dirt falls.
+- **33 weapons**, from the Baby Missile to the Nuke, MIRV, Death's Head, Napalm, Rollers, Diggers, Sandhogs, the dirt weapons and the Laser; **15 items**, among them guidance, parachutes, batteries, shields and fuel.
+- **8 computer players**: Moron, Shooter, Poolshark, Tosser, Chooser, Spoiler, Cyborg, and Unknown, which is one of the others and won't say which.
+- A shop between rounds, **Puma Arms** or **Wolf Surplus**: damage, kills and surviving pay, and cash in hand earns interest. The match goes to the best score.
+- 1.5's options: rounds, cash, interest, arms level, three scoring modes, turn order, wind, gravity, air, eight wall settings, six skies, three kinds of land, hanging dirt, fall damage, and **Pumas vs. Wolves**, a team match.
+- The tanks talk, and Settings says how often.
 
-### Everything from 1.5
+Not in this version: 1.5's *Simultaneous* real-time mode, network play, and its choice of tank shapes.
 
-- **33 weapons**: Baby Missile, Missile, Baby Nuke, Nuke, LeapFrog, Funky Bomb, MIRV, Death's Head, Napalm, Hot Napalm, Tracer, Smoke Tracer, three Rollers, Riot Charge and Blast, Riot Bomb and Heavy Riot Bomb, three Diggers, three Sandhogs, Dirt Clod, Dirt Ball, Ton of Dirt, Liquid Dirt, Dirt Charge, Earth Disrupter, Plasma Blast, Laser.
-- **15 items**: Heat, Ballistic, Horizontal and Vertical Guidance, Lazy Boy, Parachute, Battery, Mag Deflector and Super Mag, Shield, Force Shield and Heavy Shield, Auto Defense, Fuel Tank, Contact Trigger.
-- **8 computer players**: Moron, Shooter, Poolshark, Tosser, Chooser, Spoiler, Cyborg, and Unknown, which is one of the others and won't say which. They aim by flying trial shots through the same physics you play in, then miss by as much as their type misses by.
-- **The options**: rounds, starting cash, interest, arms level 0 to 4, Standard, Corporate or Vicious scoring, turn order (random, losers first, winners first, round robin), Sequential or Synchronous play, wind (none, constant, changing) and its strength, gravity, air, walls (none, wrap-around, concrete, rubber, spring, padded, random, erratic), six skies with lightning in the storms, three kinds of land and their bumpiness, hanging dirt, fall damage.
-- **Pumas vs. Wolves**: a team match where a round ends when one species is gone.
+It plays with a keyboard and a mouse: <kbd>←</kbd> <kbd>→</kbd> turn the turret, <kbd>↑</kbd> <kbd>↓</kbd> set the power, <kbd>Space</kbd> fires, and <kbd>F</kbd> then the arrow keys drives the tank on fuel. Or press on the field to aim there and drag to fine-tune. <kbd>?</kbd> in the game lists every key.
 
-### Not in this version
+## Run it locally
 
-- *Simultaneous* play, 1.5's real-time mode: several people cannot play in real time at one keyboard. Network play is not planned either.
-- 1.5's choice of tank shapes: every tank here is the one sprite, in its player's colour with its crew's ears.
+Serve the folder with any static web server and open the address it prints. With Python:
 
-Prices, damage and the money table are 1.5's as remembered, not read from its files; they live in `js/engine/const.js`, marked where they are guesses.
+```bash
+python3 -m http.server 8000
+```
 
-## Keys
+Then open <http://localhost:8000/>. Serve it rather than opening `index.html` from disk: browsers restrict pages loaded from `file://`.
 
-| Key | Action |
-|---|---|
-| ← → | turn the turret |
-| ↑ ↓ | power; hold to go faster, Shift for one at a time |
-| PgUp, PgDn | power by tens |
-| Space, Enter | fire; on a computer player's turn, hurry it |
-| 1 … 9, 0 | load a weapon by its place in the strip |
-| Tab, Shift+Tab | next or previous weapon |
-| W | all your weapons, large |
-| A | aim again: back to the last shot's angle and power |
-| I | items: shields, batteries, guidance, the target |
-| T | next target, for guidance and Lazy Boy |
-| F | drive on fuel; the arrows move the tank |
-| L | aim aid (off by default, as in 1991) |
-| F6 | into the console and back (there Tab moves, Space presses) |
-| Esc, P | pause |
-| M | sound |
-| ? | help |
+## Deploy it
 
-The mouse aims too: press on the field and the turret points there, further from the tank for more power; drag to fine-tune, and the wheel steps the power. An arrow out of the barrel is the aim, as long as the power, with the angle and power at its tip. It is not where the shell lands.
+Copy the files to any static host. Every URL in the page is relative, so it works at the site root or under any path.
 
-The console under the field is always yours (on a computer player's turn it dims and says who is aiming). It has your health, cash and score, the angle and power with ▲▼ steppers, the last shot (and how far the aim has moved from it, with **Aim again** to go back, and a cross on the field where it landed), the wind, and your weapons and items as icons: click a weapon to load it, an item to use, raise or arm it. When there are more than fit, the strip shows a count ("+7") and a drawer slides up with all of them when the pointer rests on it; the console never changes height, so the field keeps its size. After every shot a line top left of the field says what it hit and what it paid.
-
-## What's in here
+Leave these out; they are for working on the game, not playing it:
 
 | | |
 |---|---|
-| `index.html`, `css/` | the page; `css/gk-tokens.css` and `js/gk-title.js` are games-meta canon, byte for byte |
-| `js/engine/` | the rules, with no DOM: terrain, tanks, physics, weapons, economy, AI, the match |
-| `js/render.js`, `js/art.js`, `js/pixfont.js` | the battlefield, drawn on a canvas 540 high and as wide as the window was when the match began (960 to 1440), scaled up crisp |
-| `js/screens.js`, `js/hud.js`, `js/main.js` | the sheets, the bar, and the loop that runs it all |
-| `js/talk.js` | what the pumas and wolves say |
-| `tools/sim-check.js` | the engine checked headless: terrain, flight, every weapon, damage, the shop, AI matches to the end, save and restore |
-| `tools/make-icons.js`, `tools/og.html` | the icons and the share card |
+| `.git/`, `.gitlab-ci.yml` | the repository and its pipeline |
+| `tools/` | development scripts |
+| `screenshots/` | the pictures in this README |
 
-`?test=<weapon>` (for example `?test=mirv`) opens a sandbox with everything in stock and nothing saved; `?debug` puts the game on the console as `SPDEBUG`.
+`README.md`, `DEVELOPMENT.md` and `LICENSE` can go or stay. With rsync:
 
 ```bash
-node tools/sim-check.js
+rsync -av --delete --exclude='.git' --exclude='.gitlab-ci.yml' --exclude='tools' --exclude='screenshots' ./ user@host:/path/to/scorchedpuma/
 ```
 
-```bash
-node tools/stamp-assets.js
-```
+Every script and stylesheet URL carries a hash of its contents, so a long cache lifetime on the host is safe: a changed file has a new URL.
 
-Run the stamp after any change to a script or stylesheet: it puts each file's content hash in its URL, so a deploy is never served from an old cache. CI checks it.
+The share-card tags in `index.html` (`og:url`, `og:image`, `twitter:image`) name the greykit.com address. The game does not need them; change them if link previews should point at your copy.
 
-## Tech
+## Browser and screen
 
-- Plain scripts, vanilla JS and CSS, a canvas for the field; one byte a pixel of dirt, and falling dirt moves the bytes themselves
-- A match is deterministic from its seed and the commands given, and saves at the start of every turn
-- Web Audio for every sound
-- `localStorage` for a match in progress, the last custom game and the settings, all under `scorchedpuma_*`; Settings can forget everything
-- Tactical look around a pixel-art field: the cyan-on-navy palette PumaRally, PumaCity and PumaApproach share
+Scorched Puma is built for a desktop: a current browser, a keyboard and a mouse. A window narrower than 760 pixels or shorter than 480 shows a note saying so instead of the game. The field is as wide as the window when a match begins, between 960 and 1440 pixels of field, scaled to fit.
 
-## Credits
+Sound uses Web Audio and starts on the first key or click, as browsers require. <kbd>M</kbd> turns it off.
+
+## What it stores
+
+Only `localStorage`, in four keys:
+
+| Key | What |
+|---|---|
+| `scorchedpuma_match_v1` | the match in progress, saved at the start of every turn |
+| `scorchedpuma_setup_v1` | the last custom game |
+| `scorchedpuma_prefs_v1` | the settings |
+| `scorchedpuma_muted_v1` | sound on or off |
+
+No cookies, and nothing is sent anywhere. To clear it, open **Settings** and press **Forget everything**: it removes every key that starts with `scorchedpuma`, and only those, then reloads. Clearing the site's data in the browser works too, but it also clears anything else stored by that site.
+
+## License
+
+[MIT](LICENSE).
 
 Game design and code by [shandower](https://gitlab.com/shandower) with AI assistance from Claude.
 
 After Scorched Earth by Wendell Hicken. Not affiliated with Wendell Hicken; no code, art, sound or text from the original is used.
+
+Working on the game itself: [DEVELOPMENT.md](DEVELOPMENT.md).
