@@ -9,23 +9,29 @@
   const E = SP.Economy = {};
 
   const mode = s => SP.SCORING[s.opts.scoring] || SP.SCORING.standard;
-  const credit = (t, n) => { n = Math.round(n); t.cash += n; t.earned += n; };
+  /* `why` files it under the scoreboard's breakdown: dmg, kill, survive or penalty */
+  const credit = (t, n, why) => {
+    n = Math.round(n);
+    t.cash += n; t.earned += n;
+    if (!t.pay) t.pay = { dmg: 0, kill: 0, survive: 0, penalty: 0 };
+    t.pay[why] += n;
+  };
 
   E.onDamage = (s, victim, by, hp) => {
     if (!by || s.sim) return;
     const m = mode(s);
-    if (Tk.enemies(s, by, victim)) credit(by, hp * PAY.dmg * m.dmg);
-    else credit(by, -hp * PAY.dmg * m.penalty * 0.5);
+    if (Tk.enemies(s, by, victim)) credit(by, hp * PAY.dmg * m.dmg, "dmg");
+    else credit(by, -hp * PAY.dmg * m.penalty * 0.5, "penalty");
   };
 
   E.onKill = (s, victim, by) => {
     if (s.sim) return;
     const m = mode(s);
     if (by && Tk.enemies(s, by, victim)) {
-      credit(by, PAY.kill * m.kill);
+      credit(by, PAY.kill * m.kill, "kill");
       by.score += 1; by.kills++; by.roundKills++;
     } else if (by) {
-      credit(by, -PAY.kill * m.penalty * 0.5);
+      credit(by, -PAY.kill * m.penalty * 0.5, "penalty");
       by.score -= 1;
     }
     s.order.dead.push(victim.id);
@@ -34,7 +40,7 @@
   /* the round is over: pay the survivors, then interest on what everyone has */
   E.roundEnd = (s, winners) => {
     const m = mode(s);
-    for (const t of winners) { credit(t, PAY.survive * m.survive); t.score += 2; t.wins++; }
+    for (const t of winners) { credit(t, PAY.survive * m.survive, "survive"); t.score += 2; t.wins++; }
     for (const t of s.tanks) {
       if (t.cash > 0 && s.opts.interest > 0) {
         const i = Math.round(t.cash * s.opts.interest * m.interest);

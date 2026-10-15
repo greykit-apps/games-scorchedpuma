@@ -5,7 +5,7 @@
  * napalm flames, liquid dirt, beams. A turn resolves when the list is empty,
  * the dirt has settled and no tank is falling. */
 (() => {
-  const SP = globalThis.SP, T = SP.Terrain, Tk = SP.Tanks, Ph = SP.Physics;
+  const SP = globalThis.SP, T = SP.Terrain, Tk = SP.Tanks, Ph = SP.Physics, K = SP.K, KT = SP.TANK;
   const Wp = SP.Weapons = {};
   const PI = Math.PI;
 
@@ -13,7 +13,7 @@
 
   /* ---- a blast: grows, does its work at full size, fades ---- */
   Wp.boom = (s, x, y, r, dmg, by, o = {}) => {
-    const grow = Math.round(SP.clamp(r * 0.55, 8, 36));
+    const grow = Math.round(SP.clamp(r / K * 0.55, 8, 36));
     s.ents.push({ k: "boom", x, y, r, dmg, owner: by ? by.id : -1, t: 0, grow, dur: grow + 14, riot: !!o.riot, death: !!o.death, funky: !!o.funky, colour: o.colour || null });
     s.events.push({ e: "boom", x, y, r, riot: !!o.riot, death: !!o.death });
   };
@@ -24,7 +24,7 @@
       T.carve(s.terrain, e.x, e.y, e.r, { fall: !hang });
       const by = owner(s, e);
       /* whoever opens a hole under a tank owns the fall that follows */
-      if (by) for (const t of s.tanks) if (t.alive && Math.abs(t.x - e.x) < e.r + 8 && t.y >= e.y - e.r) t.lastHitBy = by.id;
+      if (by) for (const t of s.tanks) if (t.alive && Math.abs(t.x - e.x) < e.r + 8 * K && t.y >= e.y - e.r) t.lastHitBy = by.id;
       if (!e.riot) Tk.blast(s, e.x, e.y, e.r, e.dmg, by);
     }
     return e.t < e.dur;
@@ -79,6 +79,8 @@
   /* ---- landing ---- */
   const land = (s, p, w, hit) => {
     const by = s.tanks[p.owner] || null;
+    /* the first thing down from a shot is where it landed, for next turn's correction */
+    if (by && by.lastShot && by.lastShot.x === null && hit.what !== "gone") { by.lastShot.x = Math.round(hit.x); by.lastShot.y = Math.round(hit.y); }
     s.events.push({ e: "land", x: hit.x, y: hit.y, what: hit.what, weapon: p.w });
     if (w.kind === "tracer") {
       (w.smoke ? s.smoke : s.traces).push({ pts: p.trail, colour: by ? by.colour : "#fff" });
@@ -94,8 +96,8 @@
       case "leapfrog": {
         Wp.boom(s, x, y, w.hops[p.hop], w.hopDmg[p.hop], by);
         if (p.hop + 1 < w.hops.length && hit.what !== "wall") {
-          const vx = SP.clamp(p.vx * 0.75, -4, 4), vy = -Math.max(2.4, Math.abs(p.vy) * 0.55);
-          s.ents.push(Wp.shot(p.owner, p.w, { x, y: y - 4, vx, vy }, { hop: p.hop + 1 }));
+          const vx = SP.clamp(p.vx * 0.75, -4 * K, 4 * K), vy = -Math.max(2.4 * K, Math.abs(p.vy) * 0.55);
+          s.ents.push(Wp.shot(p.owner, p.w, { x, y: y - 4 * K, vx, vy }, { hop: p.hop + 1 }));
         }
         return;
       }
@@ -103,14 +105,14 @@
         if (p.bomblet) return Wp.boom(s, x, y, w.br, w.bdmg, by, { funky: true });
         Wp.boom(s, x, y, w.r, w.dmg, by, { funky: true });
         for (let i = 0; i < w.n; i++) {
-          const v = { x, y: y - 3, vx: SP.randRange(s.rng, -2.8, 2.8), vy: SP.randRange(s.rng, -4.8, -2) };
+          const v = { x, y: y - 3 * K, vx: SP.randRange(s.rng, -2.8, 2.8) * K, vy: SP.randRange(s.rng, -4.8, -2) * K };
           s.ents.push(Wp.shot(p.owner, p.w, v, { bomblet: true }));
         }
         return;
       }
       case "napalm": {
         for (let i = 0; i < w.n; i++) {
-          s.ents.push({ k: "fire", x: Math.round(x + SP.randRange(s.rng, -5, 5)), y, life: Math.round(w.life * SP.randRange(s.rng, 0.6, 1.1)), burn: w.burn, owner: p.owner, hot: w.id === "hotnapalm", t: SP.randInt(s.rng, 0, 9) });
+          s.ents.push({ k: "fire", x: Math.round(x + SP.randRange(s.rng, -5, 5) * K), y, life: Math.round(w.life * SP.randRange(s.rng, 0.6, 1.1)), burn: w.burn, owner: p.owner, hot: w.id === "hotnapalm", t: SP.randInt(s.rng, 0, 9) });
         }
         s.events.push({ e: "napalm", x, y });
         return;
@@ -121,14 +123,14 @@
       case "riotbomb":
         return Wp.boom(s, x, y, w.r, 0, by, { riot: true });
       case "digger":
-        if (p.contact) return Wp.boom(s, x, y, 12, 45, by);
+        if (p.contact) return Wp.boom(s, x, y, 12 * K, 45, by);
         for (let i = 0; i < w.n; i++) s.ents.push({ k: "worm", x, y, a: SP.randRange(s.rng, 0.12, 0.88) * PI, steps: w.steps, wid: w.w, owner: p.owner });
         s.events.push({ e: "dig", x, y });
         return;
       case "sandhog":
         if (p.contact || onTank) return Wp.boom(s, x, y, w.r, w.dmg, by);
         for (let i = 0; i < w.n; i++) {
-          s.ents.push({ k: "hog", x, y: y + 2, dir: i % 2 ? 1 : -1, dy: SP.randRange(s.rng, -0.15, 0.6), steps: w.steps + i * 6, w: w.id, owner: p.owner });
+          s.ents.push({ k: "hog", x, y: y + 2 * K, dir: i % 2 ? 1 : -1, dy: SP.randRange(s.rng, -0.15, 0.6) * K, steps: w.steps + i * 6, w: w.id, owner: p.owner });
         }
         s.events.push({ e: "dig", x, y });
         return;
@@ -137,7 +139,7 @@
         s.events.push({ e: "dirt", x, y, r: w.r });
         return;
       case "liquid":
-        for (let i = 0; i < w.n; i++) s.ents.push({ k: "liquid", x: Math.round(x + SP.randRange(s.rng, -4, 4)), y, amt: 10, life: 700, still: 0 });
+        for (let i = 0; i < w.n; i++) s.ents.push({ k: "liquid", x: Math.round(x + SP.randRange(s.rng, -4, 4) * K), y, amt: 10, life: 700, still: 0 });
         s.events.push({ e: "dirt", x, y, r: 10 });
         return;
       case "dirtcharge":
@@ -156,27 +158,27 @@
   const roll = (s, p, w, x) => {
     const t = s.terrain;
     x = SP.clamp(Math.round(x), 0, t.w - 1);
-    const y = T.surface(t, x, Math.max(0, Math.round(p.y) - 6));
-    const l = T.surface(t, x - 3, y - 8), r = T.surface(t, x + 3, y - 8);
+    const y = T.surface(t, x, Math.max(0, Math.round(p.y - 6 * K)));
+    const l = T.surface(t, x - 5, y - 12), r = T.surface(t, x + 5, y - 12);
     const dir = l > r ? -1 : r > l ? 1 : (p.vx < 0 ? -1 : 1);
     s.ents.push({ k: "roller", x, y, dir, w: w.id, owner: p.owner, steps: 500, acc: 0 });
     s.events.push({ e: "roll", x, y });
   };
   const rollerTick = (s, e) => {
     const t = s.terrain, w = SP.BY_ID[e.w], by = owner(s, e);
-    e.acc += 1.6;
+    e.acc += 1.6 * K;
     while (e.acc >= 1) {
       e.acc -= 1;
       let nx = e.x + e.dir;
       if (nx < 0 || nx > t.w - 1) {
         if (s.wall === "wrap") nx = (nx + t.w) % t.w;
         else if (s.wall === "none") return false;
-        else if (s.wall === "concrete") { Wp.boom(s, e.x, e.y - 2, w.r, w.dmg, by); return false; }
+        else if (s.wall === "concrete") { Wp.boom(s, e.x, e.y - 3, w.r, w.dmg, by); return false; }
         else { e.dir = -e.dir; continue; }
       }
-      const ny = T.surface(t, nx, e.y - 3);
-      const tank = Tk.at(s, nx, ny - 2) || Tk.at(s, nx, e.y - 2);
-      if (tank || ny < e.y - 1 || --e.steps <= 0) { Wp.boom(s, e.x, e.y - 2, w.r, w.dmg, by); return false; }
+      const ny = T.surface(t, nx, e.y - 5);
+      const tank = Tk.at(s, nx, ny - 3) || Tk.at(s, nx, e.y - 3);
+      if (tank || ny < e.y - 1 || --e.steps <= 0) { Wp.boom(s, e.x, e.y - 3, w.r, w.dmg, by); return false; }
       e.x = nx; e.y = ny;
     }
     return true;
@@ -185,7 +187,7 @@
   /* ---- diggers: worms that eat tunnels, harming nothing ---- */
   const wormTick = (s, e) => {
     const t = s.terrain;
-    for (let i = 0; i < 2; i++) {
+    for (let i = 0; i < 3; i++) {
       e.a = SP.clamp(e.a + SP.randRange(s.rng, -0.4, 0.4), 0.02 * PI, 0.98 * PI);
       e.x += Math.cos(e.a); e.y += Math.sin(e.a);
       if (e.x < 0 || e.x > t.w - 1 || e.y > t.h - 3) return false;
@@ -207,13 +209,13 @@
     }
     const tg = s.tanks[e.aim];
     for (let i = 0; i < 2; i++) {
-      e.x += e.dir * 0.8;
-      if (tg && tg.alive) e.y += SP.clamp((tg.y - 2 - e.y) * 0.05, -0.5, 0.5) + e.dy * 0.2;
+      e.x += e.dir * 0.8 * K;
+      if (tg && tg.alive) e.y += SP.clamp((tg.y - 3 - e.y) * 0.05, -0.5 * K, 0.5 * K) + e.dy * 0.2;
       else e.y += e.dy * 0.3;
       if (e.x < 0 || e.x > t.w - 1 || e.y > t.h - 3) { Wp.boom(s, SP.clamp(e.x, 0, t.w - 1), Math.min(e.y, t.h - 3), w.r, w.dmg, by); return false; }
-      T.carve(t, e.x, e.y, 2, { fall: false });
-      const hitTank = Tk.at(s, e.x, e.y) || Tk.at(s, e.x + e.dir * 3, e.y);
-      const surfaced = !T.solid(t, e.x, e.y + 3) && !T.solid(t, e.x, e.y - 3) && e.steps < w.steps - 6;
+      T.carve(t, e.x, e.y, 2 * K, { fall: false });
+      const hitTank = Tk.at(s, e.x, e.y) || Tk.at(s, e.x + e.dir * 3 * K, e.y);
+      const surfaced = !T.solid(t, e.x, e.y + 3 * K) && !T.solid(t, e.x, e.y - 3 * K) && e.steps < w.steps - 6;
       if (hitTank || surfaced || --e.steps <= 0) { Wp.boom(s, e.x, e.y, w.r, w.dmg, by); return false; }
     }
     return true;
@@ -227,11 +229,11 @@
   let occ = { fire: null, liquid: null };
   const flow = (s, e) => {
     const t = s.terrain, o = occ[e.k];
-    const here = T.surface(t, e.x, Math.max(0, e.y - 6));
+    const here = T.surface(t, e.x, Math.max(0, e.y - 9));
     const level = here - (o ? Math.floor((o[e.x] - 1) / 2) : 0);
     e.y = here - 1;
-    const l = e.x > 0 ? T.surface(t, e.x - 1, Math.max(0, e.y - 4)) : -1;
-    const r = e.x < t.w - 1 ? T.surface(t, e.x + 1, Math.max(0, e.y - 4)) : -1;
+    const l = e.x > 0 ? T.surface(t, e.x - 1, Math.max(0, e.y - 6)) : -1;
+    const r = e.x < t.w - 1 ? T.surface(t, e.x + 1, Math.max(0, e.y - 6)) : -1;
     const move = (d, n) => { if (o) { o[e.x]--; o[e.x + d]++; } e.x += d; e.y = n - 1; };
     if (l > level && (l >= r || SP.rand(s.rng) < 0.5)) { move(-1, l); return true; }
     if (r > level) { move(1, r); return true; }
@@ -245,10 +247,10 @@
   };
   const fireTick = (s, e) => {
     e.t++;
-    if (e.t % 3 === 0) flow(s, e);
+    if (e.t % 2 === 0) flow(s, e);
     for (const o of s.tanks) {
       if (!o.alive || o.health <= 0) continue;
-      if (Math.abs(o.x - e.x) <= SP.TANK.half + 1 && e.y >= o.y - SP.TANK.tall - 2 && e.y <= o.y + 2) {
+      if (Math.abs(o.x - e.x) <= KT.half + 1 && e.y >= o.y - KT.tall - 3 && e.y <= o.y + 3) {
         o.burn = (o.burn || 0) + e.burn;
         if (o.burn >= 1) { const n = Math.floor(o.burn); o.burn -= n; Tk.hurt(s, o, n, owner(s, e), "fire"); }
       }
@@ -258,7 +260,7 @@
 
   /* ---- liquid dirt: flows like napalm, then sets where it pools ---- */
   const liquidTick = (s, e) => {
-    for (let i = 0; i < 2; i++) {
+    for (let i = 0; i < 3; i++) {
       if (flow(s, e)) { e.still = 0; continue; }
       if (++e.still >= 3) {
         if (!T.setPixel(s.terrain, e.x, e.y, T.ADDED + (e.x % 3))) return false;
@@ -271,7 +273,7 @@
 
   /* ---- the weapons that never leave the tank ---- */
   const riotCharge = (s, t, w) => {
-    const a = t.angle * PI / 180, cx = t.x, cy = t.y - 5, ter = s.terrain;
+    const a = t.angle * PI / 180, cx = t.x, cy = t.y - KT.turretY, ter = s.terrain;
     let n = 0;
     for (let y = Math.max(0, Math.floor(cy - w.r)); y <= Math.min(ter.h - 2, Math.ceil(cy + w.r)); y++) {
       for (let x = Math.max(0, Math.floor(cx - w.r)); x <= Math.min(ter.w - 1, Math.ceil(cx + w.r)); x++) {
@@ -301,15 +303,15 @@
       if (y < 0) continue;
       const o = Tk.at(s, x, y, t);
       if (o) { hit = o; break; }
-      if (T.solid(ter, x, y)) T.carve(ter, x, y, 1.5);
+      if (T.solid(ter, x, y)) T.carve(ter, x, y, 1.5 * K);
     }
     if (hit) Tk.hurt(s, hit, w.dmg, t, "laser");
     s.ents.push({ k: "beam", x0: m.x, y0: m.y, x1: x, y1: y, t: 0, dur: 30, colour: t.colour });
   };
 
   const plasma = (s, t, w) => {
-    const r = 20 + w.r * t.power / 1000;
-    s.ents.push({ k: "plasma", x: t.x, y: t.y - 4, r, dmg: w.dmg, owner: t.id, t: 0, grow: 20, dur: 36 });
+    const r = 20 * K + w.r * t.power / 1000;
+    s.ents.push({ k: "plasma", x: t.x, y: t.y - KT.mid, r, dmg: w.dmg, owner: t.id, t: 0, grow: 20, dur: 36 });
   };
   const plasmaTick = (s, e) => {
     if (++e.t === e.grow) {

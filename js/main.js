@@ -11,7 +11,8 @@
 
   /* games-meta STANDARD.md §5: every key starts with the game's name */
   const KEY_MATCH = "scorchedpuma_match_v1", KEY_SETUP = "scorchedpuma_setup_v1", KEY_PREFS = "scorchedpuma_prefs_v1";
-  const prefs = { talk: "sometimes", aim: false, speed: 2, ...SP.store.get(KEY_PREFS, {}) };
+  /* coached: the first-turn note has been shown and a shot fired after it */
+  const prefs = { talk: "sometimes", aim: false, speed: 2, coached: false, ...SP.store.get(KEY_PREFS, {}) };
   let muted = false;
   try { muted = localStorage.getItem("scorchedpuma_muted_v1") === "1"; } catch (e) { /* no storage */ }
   SP.Sfx.muted = muted;
@@ -109,7 +110,7 @@
     const saved = SP.store.get(KEY_MATCH, null);
     if (a === "resume") return resumeMatch();
     if (a === "quick" || a === "custom") {
-      if (saved && !(await confirmSheet("Start a new match? The one in progress will be lost.", "New match"))) return;
+      if (saved && !(await UI.ask("Start a new match? The one in progress, " + titleCfg().items[0].meta + ", will be lost.", "Start a new match", "Abandon this match?"))) return;
       if (a === "quick") return startMatch(quickSetup());
       const setup = SP.store.get(KEY_SETUP, null) || defaultSetup();
       setup.opts = { ...SP.DEFAULT_OPTS, ...setup.opts };
@@ -133,7 +134,7 @@
       }
       const fake = { players: [] };
       for (const p of players) { p.name = UI.freshName(fake, p.faction); fake.players.push(p); }
-      sc.s = G.newMatch({ players, opts: { rounds: 1e6, cash: 0, walls: "random", sky: "random" } }, (Math.random() * 2 ** 32) >>> 0);
+      sc.s = G.newMatch({ players, w: fieldWidth(innerHeight), opts: { rounds: 1e6, cash: 0, walls: "random", sky: "random" } }, (Math.random() * 2 ** 32) >>> 0);
     }
     const s = sc.s;
     for (const t of s.tanks) for (const [id, n] of [["missile", 6], ["babynuke", 1], ["funky", 1], ["mirv", 1], ["napalm", 2], ["roller", 2], ["leapfrog", 1], ["parachute", 2]]) t.inv[id] = n;
@@ -176,20 +177,32 @@
     game.mode = "play";
     game.scene = null;
     game.paused = false;
-    game.ai = null; game.drive = false; game.roundWait = 0;
+    game.ai = null; game.drive = false; game.roundWait = 0; game.hurry = false;
     game.fx = { floats: [], bubbles: [] };
+    tally = null;
     I.clear();
     H.reset();
+    H.clearLog();
+    H.coach(null);
     $("title").hidden = true;
     $("title").innerHTML = "";
     $("game").hidden = false;
     document.body.classList.remove("on-title");
     fit();
   }
+  /* a match's field is as wide as the window, for the field's height of SP.H:
+     the room over the console now, as a width (between SP.W and SP.MAX_W) */
+  function fieldWidth(room = innerHeight - ($("console").offsetHeight || 134)) {
+    return Math.round(SP.H * innerWidth / Math.max(1, room));
+  }
   function startMatch(setup) {
     game.setup = JSON.parse(JSON.stringify(setup));
-    game.s = G.newMatch(game.setup);
+    /* the game screen up first, so the console can be measured for the field's width */
+    game.s = null;
     enterPlay();
+    game.setup.w = fieldWidth();
+    game.s = G.newMatch(game.setup);
+    fit();
     G.aiShop(game.s);
     save();
     shops(beginRound);
@@ -230,22 +243,34 @@
     const s = game.s;
     G.startRound(s);
     H.reset();
+    H.clearLog();
+    tally = null;
     const wall = SP.WALLS[s.wall].split(":")[0];
     H.banner(`Round <b>${s.round}</b> of ${s.opts.rounds} · ${esc(wall)} walls`, 2200);
     s.events = s.events.filter(e => e.e !== "turn");
     turnBanner(true);
     save();
   }
-  function turnBanner(quiet) {
+  /* a new turn: the banner for a human's, with what just happened to them
+     (said) in front of it, and the first-turn note if it hasn't been read */
+  function turnBanner(quiet, said = null) {
     const t = G.current(game.s);
     if (!t) return;
     game.drive = false;
+    game.hurry = false;
     I.clear();
-    if (t.kind === "human" && !quiet) {
-      H.banner(`<b>${esc(t.name)}</b> · your shot`, 1300);
-      SP.Sfx.play("turn");
-    }
-    H.say(t.name + "'s turn");
+    if (t.kind === "human") {
+      if (!quiet || said) H.banner((said ? said.html + " · " : "") + `<b>${esc(t.name)}</b> · your shot`, said ? 2600 : 1300);
+      if (!quiet) SP.Sfx.play("turn");
+      coach(t);
+    } else if (said) H.banner(said.html, 2600);
+    H.say((said ? said.text + ". " : "") + t.name + "'s turn");
+  }
+  function coach(t) {
+    if (prefs.coached || game.test) return;
+    const w = game.s.wind, wind = w === 0 ? "calm today" : `${Math.abs(w)} ${w < 0 ? "◀" : "▶"} now`;
+    H.coach(`<p><b>Your shot.</b> <kbd>←</kbd> <kbd>→</kbd> turn the turret, <kbd>↑</kbd> <kbd>↓</kbd> set the power, <kbd>Space</kbd> fires. Or press on the field and drag.</p>` +
+      `<p>The arrow from your barrel is your aim, its angle and power at the tip. It is not where the shell lands: gravity pulls it down and the wind (${wind}) pushes it. Fire, then correct from the cross where it came down.</p>`);
   }
   function showScoreboard(ev) {
     const s = game.s;
@@ -269,9 +294,12 @@
   /* ---- a computer player's turn, shown: a pause, the turret swinging round, the shot ---- */
   function aiStep(ctx) {
     const s = ctx.s, t = G.current(s);
-    const fast = ctx.fast ? 3 : 1;
-    if (!ctx.ai) ctx.ai = { wait: ctx.fast ? 6 : 22, plan: null, settle: 0 };
+    /* hurried: every human out of the round, Fast in Settings, or Space pressed this turn */
+    const quick = ctx.fast || ctx.hurry || (ctx === game && prefs.speed >= 4);
+    const fast = quick ? 3 : 1;
+    if (!ctx.ai) ctx.ai = { wait: quick ? 6 : 22, plan: null, settle: 0 };
     const a = ctx.ai;
+    if (ctx.hurry && a.wait > 2) a.wait = 2;
     if (a.wait > 0) { a.wait--; return; }
     if (!a.plan) { a.plan = SP.AI.plan(s, t); t.weapon = a.plan.weapon; return; }
     const da = a.plan.angle - t.angle, dp = a.plan.power - t.power;
@@ -290,6 +318,7 @@
     const s = ctx.s, fx = ctx.fx, r = ctx.r || game.r;
     const play = n => { if (loud) SP.Sfx.play(n); };
     for (const e of s.events) {
+      if (ctx === game) track(s, e);
       switch (e.e) {
         case "fire": {
           const t = s.tanks[e.tank];
@@ -318,15 +347,83 @@
         case "bounce": if (!e.sim) play("bounce"); break;
         case "disrupt": play("dirt"); break;
         case "turn":
-          if (ctx === game) { turnBanner(); save(); }
+          if (ctx === game) { turnBanner(false, told(s)); save(); }
           break;
         case "roundOver":
           /* saved as between rounds, or, the match over, the save cleared */
-          if (ctx === game) { game.roundWait = 75; game.roundEv = e; save(); }
+          if (ctx === game) {
+            const said = told(s);
+            if (said) { H.banner(said.html, 2400); H.say(said.text); }
+            game.roundWait = 75; game.roundEv = e; save();
+          }
           break;
       }
     }
     s.events.length = 0;
+  }
+
+  /* ---- what a shot did ----
+   * From the first "fire" of a turn to the next turn (or the round's end),
+   * the hits, the kills and the money are gathered; then each shooter gets a
+   * line in the log, and what touched a human comes back for the banner and
+   * the screen reader. */
+  let tally = null;
+  function track(s, e) {
+    if (e.e === "fire") {
+      if (!tally) tally = { shooters: [], weapon: {}, cash: s.tanks.map(t => t.cash), hits: [], deaths: [] };
+      if (!tally.shooters.includes(e.tank)) tally.shooters.push(e.tank);
+      if (!tally.weapon[e.tank]) tally.weapon[e.tank] = e.weapon;
+    } else if (e.e === "hit" && tally) tally.hits.push(e);
+    else if (e.e === "dying" && tally) tally.deaths.push(e);
+  }
+  const HARMLESS = ["riotcharge", "riotbomb", "dirt", "liquid", "dirtcharge", "disrupter", "digger", "tracer"];
+  const signed = n => (n < 0 ? "−" : "+") + SP.money(Math.abs(n));
+  function told(s) {
+    const t = tally;
+    tally = null;
+    if (!t) return null;
+    const swatch = k => '<span class="sw" style="background:' + k.colour + '"></span>';
+    const mine = [], plain = [];
+    for (const id of t.shooters) {
+      const sh = s.tanks[id], dealt = new Map();
+      for (const h of t.hits) if (h.by === id) dealt.set(h.tank, (dealt.get(h.tank) || 0) + h.amount);
+      const killed = new Set(t.deaths.filter(d => d.by === id).map(d => d.tank));
+      const money = sh.cash - t.cash[id];
+      const touches = [...dealt.keys()].some(v => s.tanks[v].kind === "human");
+      /* the log: shooter, then each tank it hurt, then what it was paid */
+      const hurt = [...dealt].map(([v, n]) => {
+        const vt = s.tanks[v];
+        return swatch(vt) + esc(v === id ? "itself" : vt.name) + ' <b class="dmg">−' + n + "</b>" + (killed.has(v) ? ' <span class="ko">destroyed</span>' : "");
+      });
+      const w = SP.BY_ID[t.weapon[id]];
+      const what = hurt.length ? hurt.join(" ") : HARMLESS.includes(w && w.kind) ? "fired " + esc(w.name) : '<span class="miss">missed</span>';
+      H.log(swatch(sh) + "<b>" + esc(sh.name) + "</b> " + what + (money ? ' <span class="' + (money > 0 ? "paid" : "cost") + '">' + signed(money) + "</span>" : ""),
+        { you: sh.kind === "human" || touches });
+      /* the banner and the reader: a human's own shot, or what was done to a human */
+      if (sh.kind === "human") {
+        const parts = [...dealt].map(([v, n]) => (v === id ? "hit yourself" : "hit " + s.tanks[v].name) + " −" + n + (killed.has(v) ? ", destroyed" : ""));
+        const said = parts.length ? parts.join(", ") : HARMLESS.includes(w && w.kind) ? "" : "missed" + (s.wind ? ", wind " + Math.abs(s.wind) + (s.wind < 0 ? " ◀" : " ▶") : "");
+        if (said || money) {
+          const lead = (t.shooters.length > 1 || s.tanks.filter(k => k.kind === "human").length > 1 ? sh.name + ": " : "");
+          const line = lead + (said ? said[0].toUpperCase() + said.slice(1) : "") + (money ? (said ? " · " : "") + signed(money) : "");
+          mine.push(esc(line).replace(/(−\d+|[+−]\$[\d,]+)/g, "<b>$1</b>"));
+          plain.push(line);
+        }
+      } else if (touches) {
+        for (const [v, n] of dealt) if (s.tanks[v].kind === "human") {
+          const line = sh.name + " hit " + (s.tanks[v].name === "You" ? "you" : s.tanks[v].name) + " −" + n + (killed.has(v) ? ", destroyed" : "");
+          mine.push(esc(line).replace(/(−\d+)/g, "<b>$1</b>"));
+          plain.push(line);
+        }
+      }
+    }
+    /* a human hurt by nobody's shot: a fall from dirt that just gave way */
+    for (const h of t.hits) if (h.by < 0 && s.tanks[h.tank].kind === "human") {
+      const line = s.tanks[h.tank].name + (h.why === "fall" ? " fell" : " took") + " −" + h.amount;
+      H.log(swatch(s.tanks[h.tank]) + esc(line), { you: true });
+      mine.push(esc(line)); plain.push(line);
+    }
+    return mine.length ? { html: mine.join(" · "), text: plain.join(". ") } : null;
   }
   /* who a shot is meant for, when nobody said: the nearest tank the turret faces */
   function aimedAt(s, t) {
@@ -380,7 +477,29 @@
     if (!t || game.paused || UI.isOpen()) return;
     game.drive = false;
     I.clear();
+    if (!$("coach").hidden) { H.coach(null); if (!game.test) { prefs.coached = true; SP.store.set(KEY_PREFS, prefs); } }
     G.fire(game.s);
+  }
+  /* Space on a computer player's turn: it stops dawdling */
+  function hurry() {
+    const s = game.s, t = s && G.current(s);
+    if (game.paused || !t || t.kind !== "ai" || s.phase !== "aim" || game.hurry) return;
+    game.hurry = true;
+    SP.Sfx.play("blip");
+  }
+  /* F6: into the console and back out to the field */
+  function focusConsole() {
+    if (document.activeElement && document.activeElement.closest && document.activeElement.closest("#console")) { document.activeElement.blur(); return; }
+    const con = $("console"), b = con.querySelector(".wb.sel") || con.querySelector(".wb, #c-fire:not(:disabled), #snd");
+    if (b) b.focus();
+  }
+  function toggleDrive() {
+    const t = humanAiming();
+    if (!t) return;
+    if (!game.drive && Tk.fuelLeft(t) <= 0) { H.banner("No fuel: the shop sells it", 1200); SP.Sfx.play("nope"); return; }
+    game.drive = !game.drive;
+    I.clear();
+    H.banner(game.drive ? "Driving: <b>← →</b> to move, <b>F</b> to stop" : "Aiming", 1200);
   }
   function pause() {
     if (game.mode !== "play" || UI.isOpen()) return;
@@ -422,6 +541,15 @@
       current: s.phase === "aim" && t ? t.id : null,
       aim: prefs.aim && !!human,
       target: human && human.target >= 0 ? human.target : null,
+      /* while the computer plays, a mark over your tank so it is easy to find */
+      you: !human && s.phase !== "resolve" ? (() => { const me = H.me(s); return me && me.kind === "human" && me.alive ? me.id : null; })() : null,
+      /* the console's marks: where the aim points, where it pointed last turn, where that shot came down */
+      marks: human ? {
+        aim: I.markFor(human, human.angle, human.power),
+        last: human.lastShot ? I.markFor(human, human.lastShot.angle, human.lastShot.power) : null,
+        landed: human.lastShot && human.lastShot.x !== null ? { x: human.lastShot.x, y: human.lastShot.y } : null,
+        colour: human.colour,
+      } : null,
     });
     H.update(s, game);
     /* paused with nothing on screen (Settings or Help, opened from the pause, has closed): the pause comes back */
@@ -430,20 +558,43 @@
 
   /* ---- the field's size: as big as fits under the bar, whole pixels where that's close ---- */
   function fit() {
-    const hud = $("hud").offsetHeight || 46;
-    const aw = innerWidth, ah = innerHeight - hud;
-    const s0 = Math.max(0.5, Math.min(aw / SP.W, ah / SP.H)), si = Math.floor(s0);
-    const sc = si >= 1 && si / s0 > 0.85 ? si : s0;
-    const cv = $("field");
-    cv.style.width = Math.floor(SP.W * sc) + "px";
-    cv.style.height = Math.floor(SP.H * sc) + "px";
+    const hud = $("console").offsetHeight || 96;
+    const aw = innerWidth, ah = innerHeight - hud, fw = game.s ? game.s.terrain.w : SP.W;
+    const s0 = Math.max(0.5, Math.min(aw / fw, ah / SP.H)), si = Math.floor(s0);
+    /* whole pixels only when that costs next to nothing: the field fills the window */
+    const sc = si >= 1 && si / s0 > 0.97 ? si : s0;
+    const cv = $("field"), w = Math.floor(fw * sc), h = Math.floor(SP.H * sc);
+    cv.style.width = w + "px";
+    cv.style.height = h + "px";
+    /* the field's inset in the stage, for the log and the coach to sit inside it */
+    $("stage").style.setProperty("--fx", Math.max(0, Math.floor((aw - w) / 2)) + "px");
+    $("stage").style.setProperty("--fy", Math.max(0, Math.floor((ah - h) / 2)) + "px");
   }
   addEventListener("resize", fit);
 
   /* ---- keys ---- */
+  /* the Konami code, in a match or its shop: every weapon and item, 99 of each */
+  const KONAMI = ["ArrowUp", "ArrowUp", "ArrowDown", "ArrowDown", "ArrowLeft", "ArrowRight", "ArrowLeft", "ArrowRight", "b", "a"];
+  let konami = 0;
+  function konamiKey(ev) {
+    const k = ev.key.length === 1 ? ev.key.toLowerCase() : ev.key;
+    konami = k === KONAMI[konami] ? konami + 1 : k === KONAMI[0] ? 1 : 0;
+    if (konami < KONAMI.length) return false;
+    konami = 0;
+    const s = game.s, t = UI.shopping || (s && H.me(s));
+    if (game.mode !== "play" || !t || t.kind !== "human") return false;
+    for (const x of SP.ALL) if (!x.free) t.inv[x.id] = 99;
+    SP.Sfx.play("buy");
+    H.banner(`<b>${esc(t.name)}</b> · every weapon and item, ×99`, 2400);
+    H.say(t.name + " has every weapon and item, 99 of each");
+    UI.refresh();
+    save();
+    return true;
+  }
   document.addEventListener("keydown", ev => {
     SP.Sfx.unlock();
     if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
+    if (!ev.repeat && konamiKey(ev)) { ev.preventDefault(); return; }
     if (UI.key(ev)) return;
     if (document.querySelector(".gk-sheet")) return;        // a canon question is up: it has the keys
     const k = ev.key.length === 1 ? ev.key.toLowerCase() : ev.key;
@@ -453,21 +604,26 @@
     if (game.mode !== "play" || !game.s) return;
     if (k === "Escape" || k === "p" || k === "Pause") { ev.preventDefault(); return pause(); }
     if (k === "?" || k === "h" || k === "/") { ev.preventDefault(); return UI.help(); }
+    if (k === "F6") { ev.preventDefault(); return focusConsole(); }
+    /* in the console the keyboard works the page way: Tab moves, Space and Enter press */
+    const inConsole = ev.target.closest && ev.target.closest("#console");
+    if (inConsole && (k === "Tab" || k === " " || k === "Enter")) return;
     const t = humanAiming();
-    if (!t) return;
+    if (!t) { if ((k === " " || k === "Enter") && !ev.repeat) { ev.preventDefault(); hurry(); } return; }
     if (I.isAimKey(ev.code)) { ev.preventDefault(); I.down(ev, game.s, t, game.drive); return; }
     if (k === " " || k === "Enter") { ev.preventDefault(); if (!ev.repeat) fire(); return; }
     if (k === "Tab") { ev.preventDefault(); G.cycleWeapon(game.s, ev.shiftKey ? -1 : 1); SP.Sfx.play("blip"); return; }
+    if (/^[0-9]$/.test(k)) {
+      const list = SP.WEAPONS.filter(w => Tk.count(t, w.id) > 0), w = list[k === "0" ? 9 : +k - 1];
+      if (w) { t.weapon = w.id; SP.Sfx.play("blip"); } else SP.Sfx.play("nope");
+      return;
+    }
+    if (k === "a") return H.aimAgain();
     if (k === "i") return UI.items(game.s, t, a => { if (a === "drive") game.drive = true; });
     if (k === "w") return UI.weapons(game.s, t, id => { t.weapon = id; });
     if (k === "t") { Tk.cycleTarget(game.s, t); SP.Sfx.play("blip"); return; }
     if (k === "l") { prefs.aim = !prefs.aim; SP.store.set(KEY_PREFS, prefs); H.banner("Aim aid " + (prefs.aim ? "on" : "off"), 900); return; }
-    if (k === "f") {
-      if (!game.drive && Tk.fuelLeft(t) <= 0) { H.banner("No fuel: the shop sells it", 1200); SP.Sfx.play("nope"); return; }
-      game.drive = !game.drive;
-      I.clear();
-      H.banner(game.drive ? "Driving: <b>← →</b> to move, <b>F</b> to stop" : "Aiming", 1200);
-    }
+    if (k === "f") toggleDrive();
   });
   document.addEventListener("keyup", ev => I.up(ev));
   addEventListener("blur", () => { I.clear(); if (game.mode === "play" && game.s && !UI.isOpen()) pause(); });
@@ -476,7 +632,7 @@
   /* ---- the mouse on the field ---- */
   const fieldXY = ev => {
     const r = $("field").getBoundingClientRect();
-    return [(ev.clientX - r.left) / r.width * SP.W, (ev.clientY - r.top) / r.height * SP.H];
+    return [(ev.clientX - r.left) / r.width * game.s.terrain.w, (ev.clientY - r.top) / r.height * SP.H];
   };
   $("field").addEventListener("pointerdown", ev => {
     const t = humanAiming();
@@ -500,11 +656,10 @@
   }, { passive: false });
 
   /* ---- the bar's buttons ---- */
-  $("h-fire").addEventListener("click", fire);
+  $("c-fire").addEventListener("click", ev => { fire(); if (ev.detail !== 0) ev.currentTarget.blur(); });
+  H.bind({ human: humanAiming, state: () => game.s, drive: toggleDrive, relayout: fit });
   $("snd").addEventListener("click", toggleMute);
   $("pausebtn").addEventListener("click", pause);
-  $("h-weapon").addEventListener("click", () => { const t = humanAiming(); if (t) UI.weapons(game.s, t, id => { t.weapon = id; }); });
-  $("h-items").addEventListener("click", () => { const t = humanAiming(); if (t) UI.items(game.s, t, a => { if (a === "drive") game.drive = true; }); });
   $("title").addEventListener("click", ev => { const b = ev.target.closest("[data-act]"); if (b) titleAct(b.dataset.act); });
   addEventListener("pointerdown", () => SP.Sfx.unlock(), true);
 
@@ -528,8 +683,10 @@
       run.cancel();
       game.setup = { players: [{ name: "You", faction: "puma", kind: "human" }, { name: "Target", faction: "wolf", kind: "ai", ai: "moron" }, { name: "Dummy", faction: "wolf", kind: "ai", ai: "moron" }],
         opts: { rounds: 99, cash: 0, order: "robin", wind: "none" } };
-      game.s = G.newMatch(game.setup);
       enterPlay();
+      game.setup.w = fieldWidth();
+      game.s = G.newMatch(game.setup);
+      fit();
       game.test = true;
       for (const x of SP.ALL) if (!x.free) game.s.tanks[0].inv[x.id] = 99;
       G.startRound(game.s);

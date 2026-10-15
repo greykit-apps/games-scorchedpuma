@@ -34,6 +34,7 @@
     "#": ".#.#.|.#.#.|#####|.#.#.|#####|.#.#.|.#.#.", "@": ".###.|#...#|#.###|#.#.#|#.###|#....|.###.",
     "=": ".....|.....|#####|.....|#####|.....|.....", "<": "...#.|..#..|.#...|#....|.#...|..#..|...#.",
     ">": ".#...|..#..|...#.|....#|...#.|..#..|.#...", "_": ".....|.....|.....|.....|.....|.....|#####",
+    "°": ".##..|#..#.|#..#.|.##..|.....|.....|.....",
   };
   /* each glyph as a list of lit (x, y), built once */
   const PTS = {};
@@ -60,17 +61,6 @@
     shadow(g, s, x, y, colour, edge = "#000", scale = 1) {
       for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1]]) SP.Font.draw(g, s, x + dx * scale, y + dy * scale, edge, scale);
       SP.Font.draw(g, s, x, y, colour, scale);
-    },
-    /* break s into lines of at most n characters, at spaces */
-    wrap(s, n) {
-      const out = [];
-      let line = "";
-      for (const w of s.split(" ")) {
-        if (line && (line + " " + w).length > n) { out.push(line); line = w; }
-        else line = line ? line + " " + w : w;
-      }
-      if (line) out.push(line);
-      return out;
     },
   };
 })();

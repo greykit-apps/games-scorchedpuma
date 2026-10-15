@@ -4,7 +4,7 @@
  * Its health is also its strength: as in 1.5, a tank can fire no harder than
  * ten times the health it has left. */
 (() => {
-  const SP = globalThis.SP, T = SP.Terrain, K = SP.TANK;
+  const SP = globalThis.SP, T = SP.Terrain, K = SP.TANK, KS = SP.K;
   const Tk = SP.Tanks = {};
 
   Tk.make = (p, i) => ({
@@ -22,6 +22,7 @@
     dying: 0,                       // ticks until a destroyed tank blows up
     cash: 0, score: 0,
     earned: 0, roundKills: 0,       // this round, for the scoreboard
+    pay: { dmg: 0, kill: 0, survive: 0, penalty: 0 },   // what `earned` is made of
     kills: 0, wins: 0,
     inv: {},                        // id -> count
     weapon: "babymissile",
@@ -46,10 +47,10 @@
     return true;
   };
   Tk.maxPower = t => Math.max(0, Math.round(t.health * 10));
-  Tk.centre = t => ({ x: t.x, y: t.y - 3 });
+  Tk.centre = t => ({ x: t.x, y: t.y - K.mid });
   Tk.muzzle = t => {
     const a = t.angle * Math.PI / 180;
-    return { x: t.x + Math.cos(a) * SP.PHYS.turretLen, y: t.y - 5 - Math.sin(a) * SP.PHYS.turretLen };
+    return { x: t.x + Math.cos(a) * SP.PHYS.turretLen, y: t.y - K.turretY - Math.sin(a) * SP.PHYS.turretLen };
   };
   /* is (x, y) inside the tank's box? */
   Tk.hits = (t, x, y) => x >= t.x - K.half - 0.5 && x <= t.x + K.half + 0.5 && y >= t.y - K.tall && y <= t.y + 0.5;
@@ -72,13 +73,13 @@
   /* ---- placing a round's tanks: spread out, each on a flattened pad ---- */
   Tk.place = s => {
     const live = s.tanks.filter(t => t.alive), n = live.length, w = s.terrain.w;
-    const gap = (w - 60) / n;
-    const slots = live.map((_, i) => Math.round(30 + gap * (i + 0.5) + SP.randRange(s.rng, -gap * 0.22, gap * 0.22)));
+    const gap = (w - 60 * KS) / n;
+    const slots = live.map((_, i) => Math.round(30 * KS + gap * (i + 0.5) + SP.randRange(s.rng, -gap * 0.22, gap * 0.22)));
     /* shuffle who gets which slot */
     for (let i = slots.length - 1; i > 0; i--) { const j = SP.randInt(s.rng, 0, i); [slots[i], slots[j]] = [slots[j], slots[i]]; }
     live.forEach((t, i) => {
-      t.x = SP.clamp(slots[i], 12, w - 13);
-      t.y = Math.max(40, T.surface(s.terrain, t.x));
+      t.x = SP.clamp(slots[i], 18, w - 19);
+      t.y = Math.max(60, T.surface(s.terrain, t.x));
       T.pad(s.terrain, t.x, t.y, K.half + 2);
       t.angle = t.x < w / 2 ? 60 : 120;
     });
@@ -96,14 +97,14 @@
       soak = Math.min(t.shield.hp, amount);
       t.shield.hp -= soak;
       if (t.shield.hp <= 0) { t.shield = null; s.events.push({ e: "shieldDown", tank: t.id }); }
-      else s.events.push({ e: "shieldHit", tank: t.id, x: t.x, y: t.y - 3 });
+      else s.events.push({ e: "shieldHit", tank: t.id, x: t.x, y: t.y - K.mid });
     }
     const hp = Math.min(t.health, amount - soak);
     if (hp <= 0) return 0;
     t.health -= hp;
     s.hurtThisTurn = true;
     t.power = Math.min(t.power, Tk.maxPower(t));
-    s.events.push({ e: "hit", tank: t.id, by: by ? by.id : -1, amount: hp, why, x: t.x, y: t.y - 8 });
+    s.events.push({ e: "hit", tank: t.id, by: by ? by.id : -1, amount: hp, why, x: t.x, y: t.y - K.tall - 2 });
     SP.Economy.onDamage(s, t, by, hp);
     if (t.health <= 0) Tk.destroy(s, t, by);
     return hp;
@@ -139,9 +140,9 @@
         busy = true;
         if (--t.dying === 0) {
           t.alive = false;
-          const r = SP.randInt(s.rng, 14, 34);
-          s.events.push({ e: "tankDead", tank: t.id, x: t.x, y: t.y - 3 });
-          SP.Weapons.boom(s, t.x, t.y - 3, r, 50, s.tanks[t.killedBy] || null, { death: true, colour: t.colour });
+          const r = Math.round(SP.randInt(s.rng, 14, 34) * KS);
+          s.events.push({ e: "tankDead", tank: t.id, x: t.x, y: t.y - K.mid });
+          SP.Weapons.boom(s, t.x, t.y - K.mid, r, 50, s.tanks[t.killedBy] || null, { death: true, colour: t.colour });
         }
         continue;
       }
@@ -157,7 +158,7 @@
         Tk.take(t, "parachute");
         s.events.push({ e: "chute", tank: t.id });
       }
-      f.v = f.chute ? K.chuteSpeed : Math.min(4, f.v + 0.12);
+      f.v = f.chute ? K.chuteSpeed : Math.min(4 * KS, f.v + 0.12 * KS);
       const land = Tk.restY(s, t.x, t.y);
       t.y = Math.min(land, t.y + f.v);
       if (t.y >= land) {

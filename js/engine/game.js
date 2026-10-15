@@ -10,10 +10,12 @@
 
   G.newMatch = (setup, seed = (Math.random() * 2 ** 32) >>> 0) => {
     const opts = { ...SP.DEFAULT_OPTS, ...(setup.opts || {}) };
+    /* the field's width, fixed for the match: what the page asked for, even, in bounds */
+    const w = SP.clamp(Math.round((setup.w || SP.W) / 2) * 2, SP.W, SP.MAX_W);
     const s = {
-      v: 1, seed, rng: SP.rng(seed), opts,
+      v: 1, seed, rng: SP.rng(seed), opts, w,
       tanks: [], round: 0, phase: "shop",
-      terrain: T.make(), wind: 0, wall: "none", sky: "plain", dirt: 0,
+      terrain: T.make(w), wind: 0, wall: "none", sky: "plain", dirt: 0,
       ents: [], events: [], smoke: [], traces: [],
       order: { ids: [], i: 0, dead: [] },
       pending: [], calm: 0, ticks: 0, history: [],
@@ -37,7 +39,7 @@
   G.startRound = s => {
     s.round++;
     const o = s.opts, r = s.rng;
-    s.terrain = T.make();
+    s.terrain = T.make(s.w || SP.W);
     const land = o.land === "random" ? SP.randPick(r, SP.LANDS) : o.land;
     T.generate(s.terrain, r, { land, bumpiness: o.bumpiness });
     s.land = land;
@@ -48,7 +50,7 @@
     s.ents = []; s.smoke = []; s.traces = []; s.pending = [];
     for (const t of s.tanks) {
       Object.assign(t, { alive: true, health: SP.TANK.health, dying: 0, shield: null, mag: null, guide: null, contact: false,
-        fall: null, fuel: 0, earned: 0, roundKills: 0, interest: 0, memo: null, lastHitBy: -1, killedBy: -1, burn: 0, target: -1 });
+        fall: null, fuel: 0, earned: 0, pay: { dmg: 0, kill: 0, survive: 0, penalty: 0 }, roundKills: 0, interest: 0, memo: null, lastHitBy: -1, killedBy: -1, burn: 0, target: -1, lastShot: null });
       t.power = Math.min(t.power || 500, Tk.maxPower(t));
       if (!Tk.count(t, t.weapon)) t.weapon = "babymissile";
     }
@@ -112,6 +114,7 @@
       return true;
     }
     Tk.take(t, t.weapon);
+    remember(t);
     const w = t.weapon;
     Wp.fire(s, t, w);
     if (!Tk.count(t, w)) t.weapon = "babymissile";
@@ -120,12 +123,17 @@
     return true;
   };
 
+  /* the shot just fired, for the console's corrections: where it was aimed,
+     and (filled in when it comes down) where it landed */
+  const remember = t => { t.lastShot = { angle: t.angle, power: t.power, weapon: t.weapon, x: null, y: null }; };
+
   const launchAll = s => {
     for (const c of s.pending) {
       const t = s.tanks[c.id];
       if (!t.alive || t.health <= 0) continue;
       Object.assign(t, { angle: c.angle, power: c.power, weapon: c.weapon, guide: c.guide, target: c.target });
       Tk.take(t, c.weapon);
+      remember(t);
       Wp.fire(s, t, c.weapon);
       if (!Tk.count(t, c.weapon)) t.weapon = "babymissile";
     }
@@ -152,7 +160,7 @@
     s.ticks++;
     if (s.phase !== "resolve") return;
     const a = Wp.tick(s);
-    const b = T.settle(s.terrain, 2);
+    const b = T.settle(s.terrain, 3);
     const c = Tk.tick(s);
     if (a || b || c) { s.calm = 0; s.resolveTicks = (s.resolveTicks || 0) + 1; }
     else s.calm++;
@@ -225,8 +233,9 @@
   G.load = o => {
     const s = JSON.parse(JSON.stringify(o));
     s.rng = SP.rng(o.rng);
-    s.terrain = T.make();
-    s.terrain.px = SP.rleDecode(o.ter, SP.W * SP.H);
+    s.w = o.w || SP.W;
+    s.terrain = T.make(s.w);
+    s.terrain.px = SP.rleDecode(o.ter, s.w * SP.H);
     delete s.ter;
     s.ents = []; s.events = []; s.traces = s.traces || [];
     return s;

@@ -40,17 +40,23 @@ Prices, damage and the money table are 1.5's as remembered, not read from its fi
 | ← → | turn the turret |
 | ↑ ↓ | power; hold to go faster, Shift for one at a time |
 | PgUp, PgDn | power by tens |
-| Space, Enter | fire |
+| Space, Enter | fire; on a computer player's turn, hurry it |
+| 1 … 9, 0 | load a weapon by its place in the strip |
 | Tab, Shift+Tab | next or previous weapon |
+| W | all your weapons, large |
+| A | aim again: back to the last shot's angle and power |
 | I | items: shields, batteries, guidance, the target |
 | T | next target, for guidance and Lazy Boy |
 | F | drive on fuel; the arrows move the tank |
 | L | aim aid (off by default, as in 1991) |
+| F6 | into the console and back (there Tab moves, Space presses) |
 | Esc, P | pause |
 | M | sound |
 | ? | help |
 
-The mouse aims too: press on the field and drag, further from the tank for more power; the wheel steps the power.
+The mouse aims too: press on the field and the turret points there, further from the tank for more power; drag to fine-tune, and the wheel steps the power. An arrow out of the barrel is the aim, as long as the power, with the angle and power at its tip. It is not where the shell lands.
+
+The console under the field is always yours (on a computer player's turn it dims and says who is aiming). It has your health, cash and score, the angle and power with ▲▼ steppers, the last shot (and how far the aim has moved from it, with **Aim again** to go back, and a cross on the field where it landed), the wind, and your weapons and items as icons: click a weapon to load it, an item to use, raise or arm it. When there are more than fit, the strip shows a count ("+7") and a drawer slides up with all of them when the pointer rests on it; the console never changes height, so the field keeps its size. After every shot a line top left of the field says what it hit and what it paid.
 
 ## What's in here
 
@@ -58,7 +64,7 @@ The mouse aims too: press on the field and drag, further from the tank for more 
 |---|---|
 | `index.html`, `css/` | the page; `css/gk-tokens.css` and `js/gk-title.js` are games-meta canon, byte for byte |
 | `js/engine/` | the rules, with no DOM: terrain, tanks, physics, weapons, economy, AI, the match |
-| `js/render.js`, `js/art.js`, `js/pixfont.js` | the battlefield, drawn on a 640×360 canvas scaled up crisp |
+| `js/render.js`, `js/art.js`, `js/pixfont.js` | the battlefield, drawn on a canvas 540 high and as wide as the window was when the match began (960 to 1440), scaled up crisp |
 | `js/screens.js`, `js/hud.js`, `js/main.js` | the sheets, the bar, and the loop that runs it all |
 | `js/talk.js` | what the pumas and wolves say |
 | `tools/sim-check.js` | the engine checked headless: terrain, flight, every weapon, damage, the shop, AI matches to the end, save and restore |

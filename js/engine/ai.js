@@ -34,8 +34,8 @@
     if (hit.tank === target) return 0;
     const c = Tk.centre(target);
     let d = Math.hypot(hit.x - c.x, (hit.y - c.y) * 0.7);
-    const self = Math.hypot(hit.x - t.x, hit.y - (t.y - 3));
-    if (self < r + 10) d += 2000;
+    const self = Math.hypot(hit.x - t.x, hit.y - (t.y - SP.TANK.mid));
+    if (self < r + 10 * SP.K) d += 2000;
     return d;
   };
 
@@ -43,7 +43,7 @@
    *   exact   a fine search (Lazy Boy, Cyborg)
    *   anyWay  try both directions, for bank shots off the walls (Poolshark)
    *   flat    among good shots, prefer the flattest (Shooter) */
-  AI.solve = (s, t, target, { exact = false, anyWay = false, flat = false, r = 12 } = {}) => {
+  AI.solve = (s, t, target, { exact = false, anyWay = false, flat = false, r = 12 * SP.K } = {}) => {
     const sim = simWorld(s), maxP = Tk.maxPower(t);
     if (maxP < 40) return null;
     const right = target.x > t.x;
@@ -90,13 +90,13 @@
 
   const buried = (s, t) => {
     let n = 0;
-    for (let y = t.y - 9; y > t.y - 22; y--) for (let x = t.x - 2; x <= t.x + 2; x++) if (T.solid(s.terrain, x, y)) n++;
-    return n > 12;
+    for (let y = t.y - 13; y > t.y - 33; y--) for (let x = t.x - 3; x <= t.x + 3; x++) if (T.solid(s.terrain, x, y)) n++;
+    return n > 27;
   };
 
   const DAMAGE_KINDS = ["missile", "leapfrog", "funky", "mirv", "napalm", "roller", "sandhog"];
   const owned = t => SP.WEAPONS.filter(w => Tk.count(t, w.id) > 0);
-  const reachR = w => w.r || (w.kind === "napalm" ? 18 : 12);
+  const reachR = w => w.r || (w.kind === "napalm" ? 18 : 12) * SP.K;
 
   const pickWeapon = (s, t, target, type) => {
     const mine = owned(t);
@@ -107,8 +107,8 @@
     const dist = Math.hypot(target.x - t.x, target.y - t.y);
     if (type === "moron") return { w: SP.randPick(s.rng, mine.filter(w => w.kind !== "tracer")) || SP.BY_ID.babymissile };
     /* never anything that would catch us in our own blast */
-    const safe = mine.filter(w => DAMAGE_KINDS.includes(w.kind) && reachR(w) + 22 < dist);
-    if ((type === "chooser" || type === "cyborg") && dist < 70 && mine.some(w => w.kind === "plasma")) return { w: SP.BY_ID.plasma };
+    const safe = mine.filter(w => DAMAGE_KINDS.includes(w.kind) && reachR(w) + 22 * SP.K < dist);
+    if ((type === "chooser" || type === "cyborg") && dist < 70 * SP.K && mine.some(w => w.kind === "plasma")) return { w: SP.BY_ID.plasma };
     if (!safe.length) return { w: SP.BY_ID.babymissile };
     const byDmg = safe.slice().sort((a, b) => (b.dmg || 30) - (a.dmg || 30));
     if (type === "cyborg") {
@@ -118,7 +118,7 @@
     }
     if (type === "chooser") {
       /* rollers into valleys, napalm on a tank in a hollow, else the biggest */
-      const low = target.y > SP.Terrain.surface(s.terrain, target.x - 12) + 4 && target.y > SP.Terrain.surface(s.terrain, target.x + 12) + 4;
+      const low = target.y > SP.Terrain.surface(s.terrain, target.x - 18) + 6 && target.y > SP.Terrain.surface(s.terrain, target.x + 18) + 6;
       if (low) { const w = byDmg.find(w => w.kind === "napalm" || w.kind === "roller"); if (w) return { w }; }
       return { w: byDmg[0] };
     }
