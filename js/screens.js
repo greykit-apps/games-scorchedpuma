@@ -588,27 +588,24 @@
         <li>Read what happened: the line top left of the field, and a cross where it came down. <b>Aim again</b> (<kbd>A</kbd>) goes back to that aim, to correct from.</li></ol>
         <h3>The field</h3>
         <p>Blasts dig craters and the dirt above them falls. Tanks fall too: a <b>parachute</b> saves a long drop. A <b>battery</b> gives back ten health.${SP.RULES.weaken ? " With <i>Damage weakens shots</i> on in Settings, a tank fires no harder than ten times the health it has left, so a battery is power too." : ""}</p>
+        <p>With <b>hanging dirt</b> on, a blast can leave dirt in the air until an Earth Disrupter brings it down. <b>Walls</b> can be open, wrap-around, solid or bouncy; Custom Game sets which. The sky is open: a shot off the top keeps flying, and a marker on the edge shows where and how high.</p>
+        <h3>Computer players</h3>
+        <p>They aim by flying trial shots through the same physics you play in, then miss by as much as their type misses by. Pick them in Custom Game.</p>
         <h3>Money and score</h3>
-        <p>Damage to an enemy pays, a kill pays more, surviving the round pays most; hurting yourself or your own side costs. Spend it between rounds at <b class="puma">Puma Arms</b> or <b class="wolf">Wolf Surplus</b>. The match goes to the best score: a point a kill, two for surviving a round, one off for an own goal.</p>
+        <p>Spend your cash between rounds at <b class="puma">Puma Arms</b> or <b class="wolf">Wolf Surplus</b>. The match goes to the best score: a point a kill, two for surviving a round, one off for an own goal.</p>
         <p class="gk-credit">${CREDIT}</p>`],
       ["Keys", '<table class="list">' + [
-        [["←", "→"], "Turn the turret"], [["↑", "↓"], "Power up and down; hold to go faster, <kbd>Shift</kbd> for one at a time"],
-        [["PgUp", "PgDn"], "Power by tens"], [["Space", "Enter"], "Fire; on a computer player's turn, hurry it"],
-        [["1", "0"], "Load a weapon by its place in the strip (1 to 9, then 0)"], [["Tab"], "Next weapon (<kbd>Shift</kbd> for the one before)"],
+        [["←", "→"], "Turn the turret"],
+        [["↑", "↓", "PgUp", "PgDn"], "Power up and down, or by tens; hold to go faster, <kbd>Shift</kbd> for one at a time"],
+        [["Space", "Enter"], "Fire; on a computer player's turn, hurry it"],
+        [["1", "0", "Tab"], "Load a weapon by its place in the strip (1 to 9, then 0), or the next one (<kbd>Shift</kbd>+<kbd>Tab</kbd> for the one before)"],
         [["W"], "All your weapons, large"], [["A"], "Aim again: back to the last shot's angle and power"],
         [["I"], "Items: shields, batteries, guidance, the target"], [["T"], "Next target, for guidance and Lazy Boy"],
         [["F"], "Drive on fuel; the arrows move the tank, F again to stop"], [["L"], "Aim aid on or off"],
         [["F6"], "Into the console and back: there <kbd>Tab</kbd> moves and <kbd>Space</kbd> presses"],
-        [["Esc", "P"], "Pause"], [["M"], "Sound"], [["?"], "Help"],
+        [["Esc", "P", "M", "?"], "Pause; <kbd>M</kbd> sound on or off; <kbd>?</kbd> this help"],
       ].map(([k, w]) => kbdRow(k, w)).join("") + "</table><p class=\"gk-note\">The mouse aims too: press anywhere on the field and the turret points there, with more power the further out you press; drag to fine-tune, and the wheel steps the power.</p>" +
-        "<h3>The console</h3><p>Under the field, and always yours: your tank's health, cash and score; your angle and power with <b>▲ ▼</b> steppers; your <b>last shot</b> and <b>Aim again</b>; the wind; your weapons and items. Click a weapon to load it, an item to use, raise or arm it; when there are more than fit, rest the pointer on them and a drawer slides up with the lot. On a computer player's turn it dims, and the line by Fire says who is aiming.</p>"],
-      ["Weapons", '<table class="list"><tr><th>Weapon</th><th class="n">Price</th><th class="n">Arms</th></tr>' + SP.WEAPONS.map(w => "<tr><td>" + esc(w.name) + '<span class="d">' + esc(DESC[w.id]) + '</span></td><td class="n">' + (w.free ? "free" : SP.money(w.price) + " / " + w.bundle) + '</td><td class="n">' + w.arms + "</td></tr>").join("") + "</table>"],
-      ["Items", '<table class="list"><tr><th>Item</th><th class="n">Price</th><th class="n">Arms</th></tr>' + SP.ITEMS.map(w => "<tr><td>" + esc(w.name) + '<span class="d">' + esc(DESC[w.id]) + '</span></td><td class="n">' + SP.money(w.price) + " / " + w.bundle + '</td><td class="n">' + w.arms + "</td></tr>").join("") + "</table>"],
-      ["Computer players", '<table class="list">' + SP.AIS.map(a => "<tr><td><b>" + a.name + "</b></td><td>" + esc(a.note) + "</td></tr>").join("") + '</table><p class="gk-note">They aim by flying trial shots through the same physics you play in, wind and walls and all, then miss by as much as their type misses by.</p>'],
-      ["The field", `<p><b>Walls</b>: ${Object.entries(SP.WALLS).map(([, d]) => esc(d)).join(". ")}. Random picks one a round; Erratic, one a turn.</p>
-        <p><b>Skies</b> are plain, shaded, starry, stormy, sunset or black. Storms throw lightning, but only for show.</p>
-        <p><b>Hanging dirt</b>: with it on, a blast can leave dirt in the air until an Earth Disrupter brings it down.</p>
-        <p>The sky above the field is open: a shot that goes off the top keeps flying, and a marker on the edge shows where and how high.</p>`],
+        "<p>Under the field, click a weapon to load it, an item to use it; hover for what it does.</p>"],
     ],
   });
 
