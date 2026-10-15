@@ -41,7 +41,7 @@
   const sol = SP.AI.solve(s, me, tg, { exact: true });
   G.fire(s, { weapon: "mirv", angle: sol.angle, power: sol.power });
   /* run until the warheads have split and are on their way down */
-  for (let i = 0; i < 4000 && !(s.ents.some(e => e.warhead) && s.ents.filter(e => e.warhead).every(e => e.y > 150)); i++) G.tick(s);
+  for (let i = 0; i < 4000 && !(s.ents.some(e => e.warhead) && s.ents.filter(e => e.warhead).every(e => e.y > SP.H * 0.42)); i++) G.tick(s);
   s.events.length = 0;
   const field = document.createElement("canvas");
   const r = new SP.Renderer(field);
@@ -51,8 +51,8 @@
   g.imageSmoothingEnabled = false;
   g.fillStyle = "#05070f"; g.fillRect(0, 0, 1200, 630);
   /* the battlefield across the bottom, scaled up crisp */
-  const k = 1200 / 640;
-  g.drawImage(field, 0, 110, 640, 250, 0, 630 - 250 * k, 1200, 250 * k);
+  const k = 1200 / SP.W, top = SP.H * 0.3, rows = SP.H - top;
+  g.drawImage(field, 0, top, SP.W, rows, 0, 630 - rows * k, 1200, rows * k);
   /* a shade under the words */
   const sh = g.createLinearGradient(0, 0, 0, 330);
   sh.addColorStop(0, "rgba(5,7,15,1)"); sh.addColorStop(0.62, "rgba(5,7,15,.92)"); sh.addColorStop(1, "rgba(5,7,15,0)");
@@ -70,7 +70,7 @@
   /* the icon, top right */
   const img = new Image();
   img.onload = () => { g.drawImage(img, 1010, 40, 130, 130); window.ogReady = true; };
-  img.src = "../icon.svg";
+  img.src = "../icon.svg?" + Date.now();   // never a cached copy of an old icon
   window.ogPNG = () => cv.toDataURL("image/png");
 })();
 </script>

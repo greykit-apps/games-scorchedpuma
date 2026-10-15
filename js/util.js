@@ -28,7 +28,7 @@
   };
 
   /* bytes <-> a run-length string, for the terrain in a save: dirt is long
-     runs of one colour, so a 640x360 field packs to a few kilobytes */
+     runs of one colour, so a 960x540 field packs to a few kilobytes */
   SP.rleEncode = a => {
     const out = [];
     for (let i = 0; i < a.length;) {

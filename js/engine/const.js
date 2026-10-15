@@ -7,31 +7,38 @@
 (() => {
   const SP = globalThis.SP;
 
-  /* the playfield, in its own pixels: scaled up crisp on the page */
-  SP.W = 640;
-  SP.H = 360;
+  /* The playfield, in its own pixels, scaled up crisp on the page. The
+   * numbers in this file are in 1991's pixels, a field 640 wide; K scales
+   * every distance to this finer field (speeds and gravity too, so a shot
+   * takes as long to land as it did). */
+  const K = SP.K = 1.5;
+  SP.W = 960;                       // the narrowest field; a match is as wide as the window was (s.w), up to MAX_W
+  SP.MAX_W = 1440;                  // a full-power shot carries about 1230 px on the level
+  SP.H = 540;
   SP.HZ = 60;                       // engine steps a second
 
   SP.PHYS = {
-    g: 0.05,                        // px / tick^2 at gravity 1.0
-    vMax: 6.4,                      // px / tick at power 1000: a 45-degree shot carries about the field's width
-    windA: 0.0003,                  // px / tick^2 per point of wind
+    g: 0.05 * K,                    // px / tick^2 at gravity 1.0
+    vMax: 6.4 * K,                  // px / tick at power 1000: a 45-degree shot carries about the field's width
+    windA: 0.0003 * K,              // px / tick^2 per point of wind
     dragPerVisc: 0.0004,            // fraction of velocity lost a tick, per step of air viscosity
     maxAge: 3600,                   // ticks before a shot that never lands is given up on
-    turretLen: 8,
+    turretLen: 8 * K,
   };
 
   SP.TANK = {
     health: 100,
-    half: 5,                        // body spans x-5 .. x+5
-    tall: 7,                        // hit box rises 7 px above the ground it sits on
-    fallFree: 4,                    // px a tank may drop without harm
-    fallDmg: 0.6,                   // damage per px beyond that, UNCERTAIN
-    chuteAfter: 5,                  // a parachute opens once a fall passes this many px
-    chuteSpeed: 0.6,
-    fuelPerTank: 25,                // px of travel in one Fuel Tank, UNCERTAIN
-    climb: 2,                       // steepest step up a tank can drive
-    drop: 6,                        // furthest step down a tank will drive
+    half: 8,                        // body spans x-8 .. x+8
+    tall: 11,                       // hit box rises this far above the ground it sits on
+    mid: 5,                         // the tank's middle, this far up: where blasts are measured to
+    turretY: 8,                     // the turret's root, this far up
+    fallFree: 4 * K,                // px a tank may drop without harm
+    fallDmg: 0.6 / K,               // damage per px beyond that, UNCERTAIN
+    chuteAfter: 5 * K,              // a parachute opens once a fall passes this many px
+    chuteSpeed: 0.6 * K,
+    fuelPerTank: 25 * K,            // px of travel in one Fuel Tank, UNCERTAIN
+    climb: 2 * K,                   // steepest step up a tank can drive
+    drop: 6 * K,                    // furthest step down a tank will drive
   };
 
   /* Ten player colours: the order Scorched handed them out was red first;
@@ -105,7 +112,17 @@
     I("fuel", "Fuel Tank", "fuel", 10000, 10, 0, {}),
     I("contact", "Contact Trigger", "contact", 1000, 25, 0, {}),
   ];
-  SP.SHIELD_R = 13;                 // px: a raised shield's bubble around the tank
+  SP.SHIELD_R = 20;                 // px: a raised shield's bubble around the tank
+
+  /* the tables above are in 1991's pixels: every distance in them to this field's */
+  for (const w of SP.WEAPONS) {
+    for (const k of ["r", "br", "len", "spread", "w"]) if (w[k] !== undefined) w[k] *= K;
+    if (w.hops) w.hops = w.hops.map(h => h * K);
+    if (w.steps) w.steps = Math.round(w.steps * K);
+    if (w.kind === "napalm") w.n = Math.round(w.n * K);
+    if (w.kind === "liquid") w.n = Math.round(w.n * K * K);
+  }
+  for (const it of SP.ITEMS) for (const k of ["reach", "push"]) if (it[k] !== undefined) it[k] *= K;
 
   SP.ALL = [...SP.WEAPONS, ...SP.ITEMS];
   SP.BY_ID = Object.fromEntries(SP.ALL.map(x => [x.id, x]));

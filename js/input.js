@@ -51,11 +51,20 @@
     }
   };
 
+  /* The point on the field an angle and power stand for: along the barrel,
+   * as far out as the power. A press on the field sets the aim to the point
+   * pressed, and markFor gives that point back, so the two always agree. */
+  const REACH = 3 / SP.K;                                 // power per pixel out from the turret
+  I.markFor = (t, angle, power) => {
+    const a = angle * Math.PI / 180, d = power / REACH;
+    return { x: t.x + Math.cos(a) * d, y: t.y - SP.TANK.turretY - Math.sin(a) * d };
+  };
+
   /* the mouse: point from the tank to aim, further out for more power */
   I.pointerAim = (s, t, fx, fy) => {
-    const dx = fx - t.x, dy = (t.y - 5) - fy;
+    const dx = fx - t.x, dy = (t.y - SP.TANK.turretY) - fy;
     const angle = Math.atan2(Math.max(dy, 0), dx) * 180 / Math.PI;
-    const power = Math.hypot(dx, dy) * 3;
+    const power = Math.hypot(dx, dy) * REACH;
     SP.Game.setAim(s, angle, Math.min(power, Tk.maxPower(t)));
   };
 })();

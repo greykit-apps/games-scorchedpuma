@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /* Scorched Puma's icons, from one pixel drawing: a puma-crewed tank firing,
- * on the family's navy plate.
+ * in the battlefield's 16-bit manner.
  *
  *   node tools/make-icons.js
  *
@@ -12,42 +12,53 @@
 const fs = require("fs"), path = require("path"), zlib = require("zlib");
 const ROOT = path.join(__dirname, "..");
 
-const PAL = {
-  b: "#d8a25e", l: "#f0c890", d: "#8a5a2b", t: "#16161c", w: "#f4e6c8",
-  g: "#6f9a3c", G: "#3d5a22", y: "#fff3a0", o: "#ff9a3c", r: "#d8261c", c: "#54f2ff",
-};
+/* the drawing, 32 x 32: a puma crew's tank under a dithered night sky, a shot
+ * bursting overhead. Drawn in the browser with the game's own art (js/art.js)
+ * and kept here as pixels, so this tool needs nothing but node. */
+const PAL = { a: "#081028", b: "#0b1735", c: "#8a1410", d: "#d8261c", e: "#fff3a0", f: "#ff5a28", g: "#ffd23f", h: "#ff9a3c", i: "#0f1e42", j: "#ffffff", k: "#0b0d14", l: "#f4f6fa", m: "#d4d8e2", n: "#6b7080", o: "#132550", p: "#c98f4f", q: "#cfd8ff", r: "#ecca98", s: "#5a3618", t: "#172c5d", u: "#dfb47e", v: "#e9cba6", w: "#d8a25e", x: "#926e3f", y: "#61482a", z: "#1b336a", A: "#3c3f4a", B: "#2b2d36", C: "#a4a9b6", D: "#555a66", E: "#1a1b22", F: "#b8e070", G: "#8cc04a", H: "#4a6a26", I: "#6f9a3c", J: "#5a7e30" };
 const PLATE = "#05070f";
-/* 20 x 20; '.' is the plate */
 const ART = [
-  "....................",
-  "...............oyo..",
-  "..............oyryo.",
-  "...............oyo..",
-  "............c.......",
-  ".............c......",
-  "....b....b..w.......",
-  "....bb..bb.w........",
-  "....bbbbbbw.........",
-  "....bbbbbb..........",
-  "..lllllllllllll.....",
-  "..bbbbbbbbbbbbb.....",
-  "..ddddddddddddd.....",
-  "..ttttttttttttt.....",
-  "..t.t.t.t.t.t.t.....",
-  "gggggggggggggggggggg",
-  "gGgGgGgGgGgGgGgGgGgG",
-  "GGGGGGGGGGGGGGGGGGGG",
-  "GGGGGGGGGGGGGGGGGGGG",
-  "GGGGGGGGGGGGGGGGGGGG",
+  "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "babababababababababababababababa",
+  "ababababababababababababccdccbab",
+  "bbbbbbbbbbbbbbbbbbbbbebcdfffdcgb",
+  "bbbbbbbbbbbbbbbbbbbbbbcdfhghfdcb",
+  "bbibbbibbbibbbibbbibbbcfhggghfcb",
+  "bbbibbbibbbibbbibbbibbdfgejggfdi",
+  "iiibiiibiiibiiibiiibkicfhggghfcb",
+  "bibibibibibibibibibkblcdfhghfdci",
+  "iiiiiiiiiiiiiiiiiikimincdfffddii",
+  "iiiiiiikiiikiiiiikimineiccdcciii",
+  "oioioikpkkkpkiokkimqniqioioiohoi",
+  "ioioiokrppsrkokqmminioioiqioioio",
+  "ooooookppppskkomonnooooooooooooo",
+  "ioooiokpprrrkkkonoooioooioooiooo",
+  "toootookkkuvuuuktoootoootoootooo",
+  "otoootookvvwwwwwktoootoootoootoo",
+  "tototkkkuuwwwwwwxkkktotototototo",
+  "ototkuvvvvvvuuuuuuuuktototototot",
+  "tttkwwwwwwwwwwwwwwwwwktttttttttt",
+  "tttkyxxxxxxxxxxyyyxxyktttttttttt",
+  "ztztkAAAAAAAAAAAAAAAktztztztztzt",
+  "tztkBBCDBCDBCDBCDBCDBktztztztztz",
+  "zzzzkEnEEnEEnEEnEEnEkzzzzzzzzzzz",
+  "FFFFFkkkkkkkkkkkkkkkFFFFFFFFFFFF",
+  "GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG",
+  "HIIIIIIIIHIIIIIIIIHIIIIIIIIHIIII",
+  "IIHIIIIIIIIHIIIIIIIIHIIIIIIIIHII",
+  "JJJJHJJJJJJJJHJJJJJJJJHJJJJJJJJH",
+  "JJJJJJHJJJJJJJJHJJJJJJJJHJJJJJJJ",
+  "JJJJJJJJHJJJJJJJJHJJJJJJJJHJJJJJ",
 ];
-const N = ART.length, PAD = 2, SIDE = N + PAD * 2;
+const N = ART.length, PAD = 0, SIDE = N;
 
 /* ---- icon.svg ---- */
 const rects = [];
 ART.forEach((row, y) => [...row].forEach((ch, x) => { if (PAL[ch]) rects.push(`<rect x="${x + PAD}" y="${y + PAD}" width="1" height="1" fill="${PAL[ch]}"/>`); }));
 const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${SIDE} ${SIDE}" shape-rendering="crispEdges">
-<rect width="${SIDE}" height="${SIDE}" rx="3" fill="${PLATE}"/>
-<clipPath id="p"><rect width="${SIDE}" height="${SIDE}" rx="3"/></clipPath>
+<rect width="${SIDE}" height="${SIDE}" rx="4" fill="${PLATE}"/>
+<clipPath id="p"><rect width="${SIDE}" height="${SIDE}" rx="4"/></clipPath>
 <g clip-path="url(#p)">
 ${rects.join("\n")}
 </g>
@@ -59,7 +70,7 @@ fs.writeFileSync(path.join(ROOT, "icon.svg"), svg);
 const hex = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
 const cellAt = (gx, gy) => {
   /* rounded plate corners, radius 3 cells */
-  const r = 3, cx = gx < r ? r : gx > SIDE - r ? SIDE - r : gx, cy = gy < r ? r : gy > SIDE - r ? SIDE - r : gy;
+  const r = 4, cx = gx < r ? r : gx > SIDE - r ? SIDE - r : gx, cy = gy < r ? r : gy > SIDE - r ? SIDE - r : gy;
   if (Math.hypot(gx - cx, gy - cy) > r) return null;
   const x = Math.floor(gx) - PAD, y = Math.floor(gy) - PAD;
   const ch = x >= 0 && y >= 0 && x < N && y < N ? ART[y][x] : ".";

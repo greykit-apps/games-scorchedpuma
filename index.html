@@ -28,29 +28,54 @@
 <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
 <link rel="icon" href="favicon.ico" sizes="16x16 32x32 48x48">
 <link rel="stylesheet" href="css/gk-tokens.css?v=7c37e1f9">
-<link rel="stylesheet" href="css/scorchedpuma.css?v=f83ef96e">
+<link rel="stylesheet" href="css/scorchedpuma.css?v=710f91a9">
 </head>
 <body>
 <div id="game" hidden>
-  <header id="hud">
-    <div class="who"><span class="sw" id="h-sw"></span><b id="h-name"></b><span class="side" id="h-side"></span><span class="hp" title="Health: a tank fires no harder than ten times what it has left"><i id="h-hp"></i></span></div>
-    <div class="rd" id="h-angle"><span class="k">Angle</span><b>90</b></div>
-    <div class="rd" id="h-power"><span class="k">Power</span><b>500</b><small>/1000</small></div>
-    <button id="h-weapon" title="Weapon (Tab)"><span class="n"></span><span class="c"></span></button>
-    <button id="h-items" title="Items (I)">Items <kbd>I</kbd><span class="armed"></span></button>
-    <div class="rd" id="h-wind"><span class="k">Wind</span><b>0</b></div>
-    <span id="h-state"></span>
-    <span class="spacer"></span>
-    <span id="h-cash"></span>
-    <span id="h-round"></span>
-    <button id="h-fire" class="primary">Fire <kbd>Space</kbd></button>
-    <button id="snd" class="ico" aria-label="Sound" aria-pressed="true" title="Sound (M)"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M2 6h3l4-3v10l-4-3H2z" fill="currentColor"/><path class="on" d="M11 5.5c1.2 1.4 1.2 3.6 0 5M12.8 3.8c2.1 2.4 2.1 6 0 8.4" stroke="currentColor" stroke-width="1.4" fill="none"/><path class="off" d="M11 5.5l4 5M15 5.5l-4 5" stroke="currentColor" stroke-width="1.4"/></svg></button>
-    <button id="pausebtn" class="ico" aria-label="Pause" title="Pause (Esc)"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><rect x="4" y="3" width="3" height="10" fill="currentColor"/><rect x="9" y="3" width="3" height="10" fill="currentColor"/></svg></button>
-  </header>
   <div id="stage">
-    <canvas id="field" width="640" height="360" aria-label="Scorched Puma: the battlefield"></canvas>
+    <canvas id="field" width="960" height="540" aria-label="Scorched Puma: the battlefield. Press and drag to aim."></canvas>
     <div id="banner" aria-hidden="true"></div>
+    <ol id="log" aria-hidden="true"></ol>
+    <div id="coach" hidden></div>
   </div>
+  <footer id="console" aria-label="Controls">
+    <section class="c-who" aria-label="Your tank">
+      <div class="c-line"><span class="sw" id="c-sw"></span><b id="c-name"></b><span class="side" id="c-side"></span></div>
+      <div class="c-line c-hpline"><div class="hp" title="Health: a tank fires no harder than ten times what it has left"><i id="c-hp"></i></div><span id="c-hpn"></span></div>
+      <div class="c-line c-sub"><span id="c-cash"></span><span id="c-score"></span></div>
+    </section>
+    <section class="c-aim">
+      <div class="dial" id="c-angle">
+        <span class="k">Angle</span><b class="v">90°</b>
+        <span class="step"><button data-step="angle:1" aria-label="Angle up" title="Angle up (←)">▲</button><button data-step="angle:-1" aria-label="Angle down" title="Angle down (→)">▼</button></span>
+      </div>
+      <div class="dial" id="c-power">
+        <span class="k">Power</span><b class="v">500</b><small class="max">/1000</small>
+        <span class="step"><button data-step="power:1" aria-label="Power up" title="Power up (↑)">▲</button><button data-step="power:-1" aria-label="Power down" title="Power down (↓)">▼</button></span>
+      </div>
+      <div class="c-last" id="c-last"></div>
+    </section>
+    <section class="c-wind" id="c-wind" title="Wind: it pushes every shot">
+      <span class="k">Wind</span><b class="v"></b><span class="arrow"></span>
+    </section>
+    <section class="c-arms">
+      <div class="k">Weapons <kbd>Tab</kbd> <span id="c-wname"></span><span class="more" aria-hidden="true"></span></div>
+      <div class="well"><div class="strip" id="c-weapons"></div></div>
+    </section>
+    <section class="c-items">
+      <div class="k">Items <kbd>I</kbd><span class="more" aria-hidden="true"></span></div>
+      <div class="well"><div class="strip" id="c-items"></div></div>
+    </section>
+    <section class="c-act">
+      <button id="c-fire" class="primary">Fire <kbd>Space</kbd></button>
+      <div class="c-line c-turn"><span class="sw" id="c-tsw"></span><span id="c-state"></span></div>
+      <div class="c-line">
+        <span id="c-round"></span>
+        <button id="snd" class="ico" aria-label="Sound" aria-pressed="true" title="Sound (M)"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M2 6h3l4-3v10l-4-3H2z" fill="currentColor"/><path class="on" d="M11 5.5c1.2 1.4 1.2 3.6 0 5M12.8 3.8c2.1 2.4 2.1 6 0 8.4" stroke="currentColor" stroke-width="1.4" fill="none"/><path class="off" d="M11 5.5l4 5M15 5.5l-4 5" stroke="currentColor" stroke-width="1.4"/></svg></button>
+        <button id="pausebtn" class="ico" aria-label="Pause" title="Pause (Esc)"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><rect x="4" y="3" width="3" height="10" fill="currentColor"/><rect x="9" y="3" width="3" height="10" fill="currentColor"/></svg></button>
+      </div>
+    </section>
+  </footer>
   <div id="live" class="sr" aria-live="polite"></div>
 </div>
 <div id="title" hidden></div>
@@ -61,23 +86,25 @@
   <p class="gk-credit">Built by <a href="https://greykit.com/" target="_blank" rel="noopener">greykit.com</a></p>
 </div>
 <script src="js/gk-title.js?v=6080c669"></script>
-<script src="js/util.js?v=75fb9f48"></script>
-<script src="js/engine/const.js?v=8f87c7b8"></script>
-<script src="js/engine/terrain.js?v=b92c644f"></script>
-<script src="js/engine/tanks.js?v=e92f83f3"></script>
+<script src="js/util.js?v=6fd7501c"></script>
+<script src="js/engine/const.js?v=8028a92f"></script>
+<script src="js/engine/terrain.js?v=99cdbd01"></script>
+<script src="js/engine/tanks.js?v=8d0951ce"></script>
 <script src="js/engine/physics.js?v=668d80b9"></script>
-<script src="js/engine/weapons.js?v=689f1d68"></script>
-<script src="js/engine/economy.js?v=8787c5af"></script>
-<script src="js/engine/ai.js?v=f3030ba4"></script>
-<script src="js/engine/game.js?v=de2faeb4"></script>
-<script src="js/pixfont.js?v=bde400e8"></script>
-<script src="js/art.js?v=8002813e"></script>
-<script src="js/render.js?v=7d1eabbd"></script>
+<script src="js/engine/weapons.js?v=d519a260"></script>
+<script src="js/engine/economy.js?v=77c4f44b"></script>
+<script src="js/engine/ai.js?v=7d45097a"></script>
+<script src="js/engine/game.js?v=072c555b"></script>
+<script src="js/pixfont.js?v=b105d2fa"></script>
+<script src="js/art.js?v=2a5ebd8f"></script>
+<script src="js/icons.js?v=2a728cc4"></script>
+<script src="js/render.js?v=0639b2eb"></script>
 <script src="js/sfx.js?v=44f88155"></script>
 <script src="js/talk.js?v=e6aa307e"></script>
-<script src="js/input.js?v=08cd018d"></script>
-<script src="js/hud.js?v=499c832c"></script>
-<script src="js/screens.js?v=adac7292"></script>
-<script src="js/main.js?v=d04187f4"></script>
+<script src="js/input.js?v=05ecfd4d"></script>
+<script src="js/hud.js?v=838a6fa5"></script>
+<script src="js/screens.js?v=3deb130b"></script>
+<script src="js/tips.js?v=9f450ea4"></script>
+<script src="js/main.js?v=321ce3de"></script>
 </body>
 </html>

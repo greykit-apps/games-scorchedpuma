@@ -70,15 +70,15 @@
     let mn = Infinity, mx = -Infinity;
     for (const v of hs) { mn = Math.min(mn, v); mx = Math.max(mx, v); }
     const span = mx - mn || 1;
-    const band = SP.randInt(rng, 10, 16);
-    const wob = SP.randRange(rng, 2, 5);
+    const band = Math.round(SP.randInt(rng, 10, 16) * SP.K);
+    const wob = SP.randRange(rng, 2, 5) * SP.K;
     for (let x = 0; x < w; x++) {
       const f = x / (w - 1) * n, i = Math.min(n - 1, Math.floor(f));
       const v = hs[i] + (hs[i + 1] - hs[i]) * (f - i);
       const top = Math.round(h * (lo + (1 - (v - mn) / span) * (hi - lo)));
       for (let y = top; y < h; y++) {
         /* strata follow the surface, wobbling a little, so the bands read as layers */
-        const depth = (y - top) + wob * Math.sin(x * 0.045 + y * 0.01);
+        const depth = (y - top) + wob * Math.sin(x * 0.03 + y * 0.007);
         t.px[y * w + x] = y === h - 1 ? BEDROCK : 1 + SP.clamp(Math.floor(depth / band), 0, 15);
       }
     }
@@ -89,7 +89,7 @@
   T.pad = (t, cx, y, half) => {
     for (let x = Math.max(0, cx - half); x <= Math.min(t.w - 1, cx + half); x++) {
       for (let yy = 0; yy < y; yy++) t.px[yy * t.w + x] = 0;
-      for (let yy = y; yy < t.h - 1; yy++) if (!t.px[yy * t.w + x]) t.px[yy * t.w + x] = 1 + Math.min(15, ((yy - y) / 12) | 0);
+      for (let yy = y; yy < t.h - 1; yy++) if (!t.px[yy * t.w + x]) t.px[yy * t.w + x] = 1 + Math.min(15, ((yy - y) / 18) | 0);
     }
     t.full = true;
   };

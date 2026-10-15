@@ -13,6 +13,8 @@
   /* ---- the sheet ---- */
   let sheet = null;
   UI.isOpen = () => !!sheet;
+  UI.refresh = () => { if (sheet) sheet.api.refresh(); };
+  UI.shopping = null;       // the tank whose shop is open, while one is
   UI.open = (title, o = {}) => {
     UI.close(true);
     const el = document.createElement("div");
@@ -21,25 +23,27 @@
     const back = document.activeElement;
     let tab = o.tab || 0;
     const draw = () => {
-      const scroll = el.querySelector(".gk-body") ? el.querySelector(".gk-body").scrollTop : 0;
+      const panes = [...el.querySelectorAll(".gk-body, [data-scroll]")].map(p => p.scrollTop);
       const focused = document.activeElement && el.contains(document.activeElement) ? document.activeElement.dataset.f : null;
-      el.innerHTML = '<div class="gk-box' + (o.wide ? " wide" : "") + '"><div class="gk-head"><h2>' + esc(o.heading || title) + "</h2>" +
+      el.innerHTML = '<div class="gk-box' + (o.wide ? " wide" : "") + (o.cls ? " " + o.cls : "") + '"><div class="gk-head"><h2>' + esc(o.heading || title) + "</h2>" +
+        (o.headExtra ? o.headExtra() : "") +
         (o.closable === false ? "" : '<button data-x aria-label="Close">&times;</button>') + "</div>" +
-        (o.tabs ? '<div class="gk-tabs" role="tablist">' + o.tabs.map(([t], i) => '<button role="tab" data-tab="' + i + '" aria-selected="' + (i === tab) + '">' + esc(t) + "</button>").join("") + "</div>" : "") +
-        '<div class="gk-body">' + (o.tabs ? (typeof o.tabs[tab][1] === "function" ? o.tabs[tab][1]() : o.tabs[tab][1]) : o.html()) + "</div>" +
+        (o.tabs ? '<div class="gk-tabs" role="tablist">' + o.tabs.map(([t], i) => '<button role="tab" id="gk-tab-' + i + '" aria-controls="gk-panel" data-tab="' + i + '" data-f="tab' + i + '" aria-selected="' + (i === tab) + '"' + (i === tab ? "" : ' tabindex="-1"') + ">" + esc(t) + "</button>").join("") + "</div>" : "") +
+        '<div class="gk-body"' + (o.tabs ? ' id="gk-panel" role="tabpanel" aria-labelledby="gk-tab-' + tab + '"' : "") + ">" + (o.tabs ? (typeof o.tabs[tab][1] === "function" ? o.tabs[tab][1]() : o.tabs[tab][1]) : o.html()) + "</div>" +
         (o.foot ? '<div class="gk-foot">' + o.foot() + "</div>" : "") + "</div>";
-      el.querySelector(".gk-body").scrollTop = scroll;
+      [...el.querySelectorAll(".gk-body, [data-scroll]")].forEach((p, i) => { if (panes[i] !== undefined) p.scrollTop = panes[i]; });
       const f = focused && el.querySelector('[data-f="' + focused + '"]');
       if (f) f.focus({ preventScroll: true });
     };
     draw();
-    const api = { refresh: draw, close: () => UI.close(), el, get tab() { return tab; } };
+    const tabTo = i => { tab = i; draw(); el.querySelector('[data-tab="' + tab + '"]').focus(); };
+    const api = { refresh: draw, close: () => UI.close(), el, tabTo, get tab() { return tab; }, get tabs() { return o.tabs ? o.tabs.length : 0; } };
     el.addEventListener("click", ev => {
       if (ev.target === el) { if (o.closable !== false) UI.close(); return; }
       const b = ev.target.closest("button");
       if (!b || b.disabled) return;
       if (b.hasAttribute("data-x")) return UI.close();
-      if (b.dataset.tab !== undefined) { tab = +b.dataset.tab; draw(); el.querySelector('[data-tab="' + tab + '"]').focus(); return; }
+      if (b.dataset.tab !== undefined) return tabTo(+b.dataset.tab);
       if (o.onClick) o.onClick(b, api);
     });
     if (o.onInput) { el.addEventListener("input", ev => o.onInput(ev.target, api)); el.addEventListener("change", ev => o.onInput(ev.target, api)); }
@@ -62,7 +66,7 @@
     if (!sheet) return false;
     if (ev.key === "Escape" && sheet.o.closable !== false) { ev.preventDefault(); UI.close(); return true; }
     if (ev.key === "Tab") {
-      const f = [...sheet.el.querySelectorAll('button:not(:disabled), a[href], input, select')];
+      const f = [...sheet.el.querySelectorAll('button:not(:disabled):not([tabindex="-1"]), a[href], input, select')];
       if (f.length) {
         ev.preventDefault();
         const i = f.indexOf(document.activeElement), d = ev.shiftKey ? -1 : 1;
@@ -70,10 +74,38 @@
       }
       return true;
     }
+    /* the tab row: the arrows, Home and End move along it */
+    if (ev.target.getAttribute && ev.target.getAttribute("role") === "tab" && ["ArrowLeft", "ArrowRight", "Home", "End"].includes(ev.key)) {
+      ev.preventDefault();
+      const n = sheet.api.tabs, i = sheet.api.tab;
+      sheet.api.tabTo(ev.key === "Home" ? 0 : ev.key === "End" ? n - 1 : (i + (ev.key === "ArrowLeft" ? -1 : 1) + n) % n);
+      return true;
+    }
     if (sheet.o.onKey && !(ev.target.closest && ev.target.closest("input,select"))) sheet.o.onKey(ev, sheet.api);
     return true;
   };
-  UI.ask = (q, yes) => confirmSheet(q, yes);
+  /* a question, with the focus on Cancel: Enter by reflex never throws a match away */
+  UI.ask = (q, yes, title) => {
+    const p = confirmSheet(q, yes, title);
+    const no = document.querySelector(".gk-sheet [data-no]");
+    if (no) no.focus();
+    return p;
+  };
+  /* arrows over a grid of cards: the nearest one that way from `cur` */
+  const nearest = (cards, cur, dx, dy) => {
+    const a = cur.getBoundingClientRect(), ax = a.left + a.width / 2, ay = a.top + a.height / 2;
+    let best = null, bd = Infinity;
+    for (const c of cards) {
+      if (c === cur) continue;
+      const b = c.getBoundingClientRect(), bx = b.left + b.width / 2, by = b.top + b.height / 2;
+      const along = (bx - ax) * dx + (by - ay) * dy, across = Math.abs((bx - ax) * dy) + Math.abs((by - ay) * dx);
+      if (along <= 4) continue;
+      const d = along + across * 3;
+      if (d < bd) { bd = d; best = c; }
+    }
+    return best;
+  };
+  const ARROWS = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
 
   /* ---- what everything does, for the shop and Help ---- */
   const DESC = {
@@ -104,42 +136,182 @@
   const sw = t => '<span class="sw" style="background:' + t.colour + '"></span>';
   const who = t => sw(t) + esc(t.name) + ' <span class="' + t.faction + '">' + SP.FACTIONS[t.faction].one + "</span>";
 
-  /* ---- the shop, one human at a time ---- */
+  /* ---- the shop, one human at a time ----
+   * A shelf of big icon cards, grouped by what the things do, and beside
+   * it the one picked out: what it does, its numbers, Buy and Sell. Arrows
+   * walk the shelf, Enter buys, Delete sells, D is done. */
+  const SHELVES = {
+    weapon: [
+      ["Missiles and bombs", ["babymissile", "missile", "babynuke", "nuke", "leapfrog", "funky", "mirv", "deathshead"]],
+      ["Fire", ["napalm", "hotnapalm"]],
+      ["Rollers", ["babyroller", "roller", "heavyroller"]],
+      ["Burrowers", ["babysandhog", "sandhog", "heavysandhog", "babydigger", "digger", "heavydigger"]],
+      ["Dirt", ["dirtclod", "dirtball", "tonofdirt", "liquiddirt", "dirtcharge", "riotcharge", "riotblast", "riotbomb", "heavyriotbomb", "disrupter"]],
+      ["Beams", ["laser", "plasma"]],
+      ["Tracers", ["tracer", "smoketracer"]],
+    ],
+    item: [
+      ["Gear", ["parachute", "battery", "fuel", "contact"]],
+      ["Defence", ["shield", "forceshield", "heavyshield", "mag", "supermag", "autodefense"]],
+      ["Guidance", ["heat", "ballistic", "horz", "vert", "lazyboy"]],
+    ],
+  };
+  /* the starter kit: what the shop's button buys, in order, while the money
+     lasts. Something to shoot first; a parachute pack is dear, so it comes
+     after the batteries */
+  const KIT = ["missile", "battery", "missile", "parachute", "babynuke", "shield"];
+  /* in 1991 pixels, as the weapon table was written */
+  const blastWord = r => (r /= SP.K) <= 10 ? "small" : r <= 20 ? "medium" : r <= 40 ? "large" : "huge";
+  const stats = x => {
+    const rows = [];
+    if (x.type !== "weapon") return rows;
+    if (x.kind === "mirv") rows.push(["Warheads", x.n + ", each a " + blastWord(x.r) + " blast"]);
+    else if (x.kind === "leapfrog") rows.push(["Blasts", "3, each bigger"]);
+    else if (x.kind === "funky") rows.push(["Blasts", "1 " + blastWord(x.r) + ", then " + x.n + " bomblets"]);
+    else if (x.kind === "sandhog") rows.push(["Burrowers", x.n + ", each a " + blastWord(x.r) + " blast"]);
+    else if (x.kind === "digger") rows.push(["Tunnels", String(x.n)]);
+    else if (x.r && x.dmg) rows.push(["Blast", blastWord(x.r)]);
+    else if (x.r) rows.push(["Size", blastWord(x.r)]);
+    if (x.dmg) rows.push(["Damage", "up to " + (x.hopDmg ? Math.max(...x.hopDmg) : x.dmg) + (x.kind === "mirv" || x.kind === "sandhog" ? " each" : "")]);
+    if (x.kind === "napalm") rows.push(["Damage", "burns whatever it touches"]);
+    if (["riotcharge", "riotbomb", "dirt", "liquid", "dirtcharge", "disrupter", "digger", "tracer"].includes(x.kind)) rows.push(["Damage", "none"]);
+    return rows;
+  };
+  UI.stats = stats;
   UI.shop = (s, t, done) => {
-    const rows = type => E.stock(s).filter(x => x.type === type).map(x => {
-      const have = t.inv[x.id] || 0;
-      return "<tr" + (t.cash < x.price && !have ? ' class="dim"' : "") + "><td>" + esc(x.name) + '<span class="d">' + esc(DESC[x.id] || "") + "</span></td>" +
-        '<td class="n">' + SP.money(x.price) + '<span class="d">for ' + x.bundle + "</span></td>" +
-        '<td class="n">' + (have || "—") + "</td>" +
-        '<td class="n"><button data-buy="' + x.id + '" data-f="b' + x.id + '"' + (t.cash < x.price ? " disabled" : "") + ">Buy</button> " +
-        '<button data-sell="' + x.id + '" data-f="s' + x.id + '"' + (have ? "" : " disabled") + ' title="Sell one back for ' + SP.money(E.sellPrice(x.id)) + '">Sell</button></td></tr>';
-    }).join("");
-    const table = type => '<table class="list"><tr><th>' + (type === "weapon" ? "Weapon" : "Item") + '</th><th class="n">Price</th><th class="n">Have</th><th></th></tr>' + rows(type) + "</table>";
-    return UI.open(SP.FACTIONS[t.faction].shop, {
-      wide: true, closable: false,
-      heading: SP.FACTIONS[t.faction].shop + " · round " + (s.round + 1) + " of " + s.opts.rounds,
-      tabs: [["Weapons", () => head() + table("weapon")], ["Items", () => head() + table("item")]],
-      foot: () => '<span class="grow">' + who(t) + ' · <span class="cash">' + SP.money(t.cash) + "</span></span>" +
-        '<button class="primary" data-done>Done <kbd>Enter</kbd></button>',
-      onClick: (b, api) => {
-        if (b.dataset.buy) { SP.Sfx.play(E.buy(s, t, b.dataset.buy) ? "buy" : "nope"); api.refresh(); }
-        else if (b.dataset.sell) { if (E.sell(s, t, b.dataset.sell)) SP.Sfx.play("sell"); api.refresh(); }
-        else if (b.hasAttribute("data-done")) { UI.close(true); done(); }
+    let sel = null, api = null;
+    const bought = [];        // this visit's buys, newest last, for Undo at full price
+    const kind = () => (api && api.tab === 1 ? "item" : "weapon");
+    const stock = new Set(E.stock(s).map(x => x.id));
+    const ids = k => SHELVES[k].flatMap(([, list]) => list).filter(id => stock.has(id));
+    /* the pick starts on the first thing you can pay for */
+    const pick = () => {
+      const list = ids(kind());
+      if (!sel || !list.includes(sel)) sel = list.find(id => SP.BY_ID[id].price <= t.cash) || list[0];
+      return SP.BY_ID[sel];
+    };
+    const card = id => {
+      const x = SP.BY_ID[id], have = t.inv[id] || 0, poor = t.cash < x.price;
+      return '<button class="card' + (id === sel ? " sel" : "") + (poor ? " poor" : "") + '" data-pick="' + id + '" data-f="c' + id + '" aria-pressed="' + (id === sel) + '"' +
+        ' aria-label="' + esc(x.name + ", " + SP.money(x.price) + " for " + x.bundle + (poor ? ", can't afford" : "") + (have ? ", you have " + have : "")) + '">' +
+        SP.IconImg(id, 2) + (have ? '<span class="own">×' + have + "</span>" : "") +
+        '<span class="nm">' + esc(x.name) + '</span><span class="pr">' + SP.money(x.price) + "<small> · " + x.bundle + "</small></span></button>";
+    };
+    const shelf = k => {
+      pick();
+      const broke = !ids(k).some(id => SP.BY_ID[id].price <= t.cash);
+      const note = broke
+        ? '<p class="broke">Nothing on these shelves is in reach at ' + SP.money(t.cash) + "." + (k === "weapon" ? " Baby Missiles are free and never run out." : "") +
+          " Damage, kills and surviving the round pay for the next shop.</p>"
+        : "";
+      return '<div class="shelf" data-scroll>' + note + SHELVES[k].map(([head, list]) => {
+        const here = list.filter(id => stock.has(id));
+        return here.length ? "<h3>" + esc(head) + '</h3><div class="cards">' + here.map(card).join("") + "</div>" : "";
+      }).join("") + (k === "weapon" && !broke ? '<p class="gk-note">Baby Missiles are free and never run out.</p>' : "") + "</div>";
+    };
+    const detail = () => {
+      const x = pick(), have = t.inv[x.id] || 0, short = x.price - t.cash;
+      return '<aside class="detail">' + SP.IconImg(x.id, 3, "big") + "<h4>" + esc(x.name) + '</h4><p class="what">' + esc(DESC[x.id] || "") + "</p>" +
+        "<dl>" + stats(x).map(([k, v]) => "<dt>" + k + "</dt><dd>" + esc(v) + "</dd>").join("") +
+        "<dt>Comes</dt><dd>" + x.bundle + " for " + SP.money(x.price) + (x.bundle > 1 ? " · " + SP.money(x.price / x.bundle) + " each" : "") + "</dd>" +
+        "<dt>You have</dt><dd>" + (have || "none") + "</dd></dl>" +
+        '<button class="primary buy" data-buy="' + x.id + '"' + (short > 0 ? " disabled" : "") + ">" +
+        (short > 0 ? "Need " + SP.money(short) + " more" : "Buy " + x.bundle + " · " + SP.money(x.price) + " <kbd>Enter</kbd>") + "</button>" +
+        '<button class="sell" data-sell="' + x.id + '"' + (have ? "" : " disabled") + ">Sell one · +" + SP.money(E.sellPrice(x.id)) + " <kbd>Del</kbd></button></aside>";
+    };
+    const buyOne = id => { if (!E.buy(s, t, id)) return false; bought.push(id); return true; };
+    const buy = () => { const x = pick(); SP.Sfx.play(buyOne(x.id) ? "buy" : "nope"); api.refresh(); };
+    const sell = () => { const x = pick(); SP.Sfx.play(E.sell(s, t, x.id) ? "sell" : "nope"); api.refresh(); };
+    /* Undo takes back this visit's last buy at what it cost, while the whole bundle is still here */
+    const undoable = () => { const id = bought[bought.length - 1]; return id && (t.inv[id] || 0) >= SP.BY_ID[id].bundle ? id : null; };
+    const undo = () => {
+      const id = undoable();
+      if (!id) { SP.Sfx.play("nope"); return; }
+      const x = SP.BY_ID[id];
+      bought.pop();
+      for (let i = 0; i < x.bundle; i++) Tk.take(t, id);
+      t.cash += x.price;
+      SP.Sfx.play("sell");
+      api.refresh();
+    };
+    const kit = () => {
+      let any = false;
+      for (const id of KIT) if (stock.has(id) && buyOne(id)) any = true;
+      SP.Sfx.play(any ? "buy" : "nope");
+      api.refresh();
+    };
+    const kitFits = () => KIT.some(id => stock.has(id) && SP.BY_ID[id].price <= t.cash);
+    const finish = () => { UI.shopping = null; UI.close(true); done(); };
+    const focusSel = () => {
+      const f = api.el.querySelector('[data-f="c' + sel + '"]');
+      if (f) { f.focus({ preventScroll: true }); f.scrollIntoView({ block: "nearest" }); }
+    };
+    /* arrows: the nearest card that way */
+    const walk = (ev, dx, dy) => {
+      const cards = [...api.el.querySelectorAll(".card")];
+      const cur = api.el.querySelector(".card.sel") || cards[0];
+      if (!cur) return;
+      ev.preventDefault();
+      const best = nearest(cards, cur, dx, dy);
+      if (!best) return;
+      sel = best.dataset.pick;
+      api.refresh();
+      focusSel();
+    };
+    UI.shopping = t;
+    api = UI.open(SP.FACTIONS[t.faction].shop, {
+      wide: true, closable: false, cls: "shop fac-" + t.faction,
+      heading: SP.FACTIONS[t.faction].shop,
+      headExtra: () => '<span class="who">' + who(t) + '</span><span class="round">round ' + (s.round + 1) + " of " + s.opts.rounds + '</span><span class="cash big">' + SP.money(t.cash) + "</span>",
+      tabs: [["Weapons", () => shelf("weapon") + detail()], ["Items", () => shelf("item") + detail()]],
+      foot: () => '<span class="grow">' + (() => {
+        const owned = SP.ALL.filter(x => t.inv[x.id] > 0);
+        if (owned.length) return owned.map(x => '<span class="got">' + SP.IconImg(x.id, 0.5, "mini") + esc(x.name) + " ×" + t.inv[x.id] + "</span>").join("");
+        return kitFits() ? '<button data-kit data-f="kit">Buy a starter kit</button><span class="hint">missiles, then batteries and a parachute, as far as the money goes</span>' : "Nothing bought yet.";
+      })() + "</span>" +
+        '<button data-undo data-f="undo"' + (undoable() ? "" : " disabled") + ' title="Take back the last buy at what it cost">Undo <kbd>U</kbd></button>' +
+        '<button class="primary" data-done>Done <kbd>D</kbd></button>',
+      onClick: (b, a) => {
+        if (b.dataset.pick) { sel = b.dataset.pick; a.refresh(); focusSel(); }
+        else if (b.dataset.buy) buy();
+        else if (b.dataset.sell) sell();
+        else if (b.hasAttribute("data-undo")) undo();
+        else if (b.hasAttribute("data-kit")) kit();
+        else if (b.hasAttribute("data-done")) finish();
       },
-      onKey: ev => { if (ev.key === "Enter" && !(ev.target.closest && ev.target.closest("[data-buy],[data-sell],[role=tab]"))) { ev.preventDefault(); UI.close(true); done(); } },
+      onKey: ev => {
+        const k = ev.key;
+        if (ARROWS[k]) walk(ev, ...ARROWS[k]);
+        else if (k === "Enter" && !(ev.target.closest && ev.target.closest("[data-done],[data-sell],[data-undo],[data-kit],[role=tab]"))) { ev.preventDefault(); buy(); }
+        else if (k === "Delete" || k === "Backspace") { ev.preventDefault(); sell(); }
+        else if (k === "u" || k === "U") { ev.preventDefault(); undo(); }
+        else if (k === "d" || k === "D") { ev.preventDefault(); finish(); }
+      },
     });
-    function head() {
-      const owned = SP.ALL.filter(x => t.inv[x.id] > 0).map(x => esc(x.name) + " ×" + t.inv[x.id]).join(", ") || "nothing yet";
-      return '<p class="gk-note">' + who(t) + " has " + owned + ". Baby Missiles are free and never run out.</p>";
-    }
+    /* the default pick is lit and has the focus, so the arrows start from it */
+    api.refresh();
+    focusSel();
+    return api;
   };
 
   /* ---- weapons and items on your turn ---- */
   UI.weapons = (s, t, pick) => UI.open("Weapon", {
-    html: () => '<table class="list">' + SP.WEAPONS.filter(w => Tk.count(t, w.id) > 0).map(w =>
-      "<tr><td>" + esc(w.name) + '<span class="d">' + esc(DESC[w.id]) + '</span></td><td class="n">' + (w.free ? "∞" : "×" + t.inv[w.id]) +
-      '</td><td class="n"><button data-w="' + w.id + '"' + (w.id === t.weapon ? ' class="on" autofocus' : "") + ">" + (w.id === t.weapon ? "In use" : "Use") + "</button></td></tr>").join("") + "</table>",
+    wide: true, cls: "picker",
+    html: () => '<div class="cards">' + SP.WEAPONS.filter(w => Tk.count(t, w.id) > 0).map((w, i) => {
+      const key = SP.Hud.slotKey(i);
+      return '<button class="card' + (w.id === t.weapon ? " sel" : "") + '" data-w="' + w.id + '" data-tip="' + w.id + '"' + (w.id === t.weapon ? " autofocus" : "") + ">" + SP.IconImg(w.id, 2) +
+        (key ? '<span class="slot" aria-hidden="true">' + key + "</span>" : "") +
+        '<span class="own">' + (w.free ? "∞" : "×" + t.inv[w.id]) + '</span><span class="nm">' + esc(w.name) + '</span><span class="d">' + esc(DESC[w.id]) + "</span></button>";
+    }).join("") + '</div><p class="gk-note">Arrows move, <kbd>Enter</kbd> loads. On the field, <kbd>1</kbd> to <kbd>0</kbd> load these in this order.</p>',
     onClick: b => { if (b.dataset.w) { pick(b.dataset.w); UI.close(); } },
+    onKey: (ev, api) => {
+      const d = ARROWS[ev.key];
+      if (!d) return;
+      const cards = [...api.el.querySelectorAll(".card")], cur = document.activeElement && document.activeElement.closest(".card");
+      const next = cur ? nearest(cards, cur, ...d) : cards[0];
+      ev.preventDefault();
+      if (next) next.focus();
+    },
   });
 
   UI.items = (s, t, after) => UI.open("Items", {
@@ -158,8 +330,8 @@
         }
       };
       const targets = s.tanks.filter(o => o !== t && o.alive && o.health > 0);
-      return (mine.length ? '<table class="list">' + mine.map(x => "<tr><td>" + esc(x.name) + '<span class="d">' + esc(DESC[x.id]) + '</span></td><td class="n">' +
-        (x.id === "fuel" ? Tk.fuelLeft(t) + " px" : "×" + t.inv[x.id]) + '</td><td class="n">' + act(x) + "</td></tr>").join("") + "</table>"
+      return (mine.length ? '<table class="list">' + mine.map(x => '<tr><td class="ic">' + SP.IconImg(x.id, 1) + "</td><td>" + esc(x.name) + '<span class="d">' + esc(DESC[x.id]) + '</span></td><td class="n">' +
+        (x.id === "fuel" ? Math.floor(Tk.fuelLeft(t)) + " px" : "×" + t.inv[x.id]) + '</td><td class="n">' + act(x) + "</td></tr>").join("") + "</table>"
         : '<p class="gk-note">You have no items. The shop between rounds sells them.</p>') +
         "<h3>Target</h3><p class=\"gk-note\">For guidance and Lazy Boy. <kbd>T</kbd> steps through them on the field.</p><div class=\"row\">" +
         targets.map(o => '<button data-target="' + o.id + '"' + (o.id === t.target ? ' class="on"' : "") + ">" + sw(o) + esc(o.name) + "</button>").join("") + "</div>";
@@ -171,28 +343,81 @@
     },
   });
 
-  /* ---- between rounds ---- */
+  /* ---- between rounds ----
+   * The winner first, in their colours, their tank drawn large and a word
+   * from the crew; then what the round paid each human and why; then the
+   * table. The last round's sheet is the final standings. */
+  const VICTORY = {
+    puma: ["Top cat. Obviously.", "I'll be in the sunbeam if anyone needs me.", "Nine lives, zero scratches.", "Cats rule. Told you.",
+      "Somebody fetch me a saucer of milk.", "Wake me for the next one."],
+    wolf: ["Pack leader. Say it.", "Who's a good boy? ME.", "Awoooooo!", "Cat's out of the bag. And out of the game.",
+      "Belly rubs for the winner.", "The moon is mine tonight."],
+  };
+  const portrait = (t, scale = 3) => '<canvas class="champ" data-tank="' + t.id + '" width="40" height="28" style="width:' + 40 * scale + "px;height:" + 28 * scale + 'px" aria-hidden="true"></canvas>';
+  const drawPortraits = (el, s) => {
+    for (const cv of el.querySelectorAll("canvas.champ")) {
+      const t = s.tanks[+cv.dataset.tank], g = cv.getContext("2d");
+      g.imageSmoothingEnabled = false;
+      SP.Art.drawTank(g, { ...t, x: 20, y: 25, angle: t.faction === "puma" ? 55 : 125 }, {});
+    }
+  };
+  const fate = (s, t, last) => {
+    if (last.winners.includes(t.id)) return '<span class="win">survived</span>';
+    if (t.alive && t.health > 0) return '<span class="dim">still standing</span>';
+    const k = s.tanks[t.killedBy];
+    return '<span class="lose">' + (!k ? "destroyed" : k === t ? "destroyed by its own shot" : "destroyed by " + esc(k.name)) + "</span>";
+  };
+  /* the quick game's human is called You: "You win", not "You wins" */
+  const wins = t => t.name + (t.name === "You" ? " win" : " wins");
+  const PAYS = [["dmg", "Damage"], ["kill", "Kills"], ["survive", "Survived"], ["penalty", "Own goals"]];
+  const paid = t => {
+    const p = t.pay || {}, bits = PAYS.filter(([k]) => p[k]).map(([k, l]) => "<span>" + l + ' <b class="' + (p[k] < 0 ? "lose" : "win") + '">' + (p[k] < 0 ? "−" : "+") + SP.money(Math.abs(p[k])) + "</b></span>");
+    if (t.interest) bits.push('<span>Interest <b class="win">+' + SP.money(t.interest) + "</b></span>");
+    return bits.length ? bits.join("") : '<span class="dim">Nothing paid this round.</span>';
+  };
   UI.scoreboard = (s, ev, next) => {
     const last = s.history[s.history.length - 1];
     const winners = last.winners.map(i => s.tanks[i]);
+    const final = ev.last, board = SP.Game.standings(s);
     let line;
     if (last.stalemate) line = "Stalemate. Nobody could hurt anybody.";
     else if (!winners.length) line = "Nobody made it.";
     else if (s.opts.teams) line = SP.FACTIONS[winners[0].faction].name + " take the round.";
-    else line = winners[0].name + " wins the round.";
-    const rows = SP.Game.standings(s).map((t, i) => "<tr><td>" + (i + 1) + "</td><td>" + who(t) + (last.winners.includes(t.id) ? ' <span class="win">survived</span>' : "") + "</td>" +
-      '<td class="n">' + SP.money(t.earned) + '</td><td class="n">' + SP.money(t.interest || 0) + '</td><td class="n">' + SP.money(t.cash) + '</td><td class="n">' + t.kills + '</td><td class="n">' + t.score + "</td></tr>").join("");
-    const teams = s.opts.teams ? (() => { const ts = SP.Game.teamScores(s); return '<p><span class="puma">Pumas ' + ts.puma + '</span> · <span class="wolf">Wolves ' + ts.wolf + "</span></p>"; })() : "";
-    const final = ev.last;
-    let champ = "";
+    else line = wins(winners[0]) + " the round.";
+    /* the moment: who won (the match, on the last sheet), drawn large */
+    let heroes = winners, head = line, faction = winners[0] && winners[0].faction, sub = "";
     if (final) {
-      const top = SP.Game.standings(s)[0];
-      if (s.opts.teams) { const ts = SP.Game.teamScores(s); champ = ts.puma === ts.wolf ? "The Pumas and the Wolves are level." : (ts.puma > ts.wolf ? "The Pumas" : "The Wolves") + " win the match."; }
-      else champ = top.name + " wins the match.";
-    }
-    return UI.open(final ? "Final standings" : "Round " + s.round + " of " + s.opts.rounds, {
-      wide: true, closable: false,
-      html: () => (final ? '<p class="big">' + esc(champ) + "</p>" : "") + "<p>" + esc(line) + "</p>" + teams +
+      const top = board[0];
+      if (s.opts.teams) {
+        const ts = SP.Game.teamScores(s);
+        faction = ts.puma === ts.wolf ? null : ts.puma > ts.wolf ? "puma" : "wolf";
+        head = !faction ? "The Pumas and the Wolves are level." : SP.FACTIONS[faction].name + " win the match.";
+        heroes = faction ? board.filter(t => t.faction === faction).slice(0, 4) : [];
+        sub = '<span class="puma">Pumas ' + ts.puma + '</span> · <span class="wolf">Wolves ' + ts.wolf + "</span>";
+      } else {
+        heroes = [top]; faction = top.faction;
+        head = wins(top) + " the match.";
+        sub = "Score " + top.score + " · " + top.kills + " kill" + (top.kills === 1 ? "" : "s") + " · " + top.wins + " round" + (top.wins === 1 ? "" : "s") + " survived · " + SP.money(top.cash);
+      }
+    } else if (s.opts.teams) {
+      const ts = SP.Game.teamScores(s);
+      sub = '<span class="puma">Pumas ' + ts.puma + '</span> · <span class="wolf">Wolves ' + ts.wolf + "</span>";
+      heroes = winners.slice(0, 4);
+    } else heroes = winners.slice(0, 1);
+    const quote = faction && heroes.length ? VICTORY[faction][Math.floor(Math.random() * VICTORY[faction].length)] : "";
+    const hero = '<div class="hero' + (faction ? " fac-" + faction : " none") + (final ? " final" : "") + '">' +
+      (heroes.length ? '<div class="champs">' + heroes.map(t => portrait(t, final && heroes.length === 1 ? 4 : 3)).join("") + "</div>" : "") +
+      '<div class="said"><p class="head">' + esc(head) + "</p>" + (sub ? '<p class="sub">' + sub + "</p>" : "") +
+      (quote ? '<p class="quote">“' + esc(quote) + "”" + (heroes.length === 1 && heroes[0].name !== "You" ? " <span>" + esc(heroes[0].name) + "</span>" : "") + "</p>" : "") + "</div></div>";
+    /* each human's round: how it ended for them, and what it paid */
+    const humans = s.tanks.filter(t => t.kind === "human");
+    const yours = humans.map(t => '<div class="yours"><div class="who">' + who(t) + " " + fate(s, t, last) + "</div>" +
+      '<div class="pay">' + paid(t) + '<span class="sum">This round <b>' + (t.earned + (t.interest || 0) < 0 ? "−" : "+") + SP.money(Math.abs(t.earned + (t.interest || 0))) + "</b> · cash " + SP.money(t.cash) + "</span></div></div>").join("");
+    const rows = board.map((t, i) => '<tr class="' + (t.kind === "human" ? "me" : "") + '"><td class="rank">' + (i + 1) + "</td><td>" + who(t) + (last.winners.includes(t.id) ? ' <span class="win">survived</span>' : "") + "</td>" +
+      '<td class="n">' + SP.money(t.earned) + '</td><td class="n">' + SP.money(t.interest || 0) + '</td><td class="n">' + SP.money(t.cash) + '</td><td class="n">' + t.kills + '</td><td class="n">' + t.score + "</td></tr>").join("");
+    const api = UI.open(final ? "Final standings" : "Round " + s.round + " of " + s.opts.rounds, {
+      wide: true, closable: false, cls: "scores",
+      html: () => hero + yours +
         '<table class="list"><tr><th></th><th>Tank</th><th class="n">This round</th><th class="n">Interest</th><th class="n">Cash</th><th class="n">Kills</th><th class="n">Score</th></tr>' + rows + "</table>" +
         '<p class="gk-note">Score: a point a kill, two for surviving a round, a point off for killing a friend or yourself.</p>',
       foot: () => final
@@ -205,6 +430,8 @@
       },
       onKey: ev2 => { if (ev2.key === "Enter" && !(ev2.target.closest && ev2.target.closest("button"))) { ev2.preventDefault(); UI.close(true); next(final ? "again" : "next"); } },
     });
+    drawPortraits(api.el, s);
+    return api;
   };
 
   UI.pause = (act) => UI.open("Paused", {
@@ -223,48 +450,65 @@
     const used = new Set(setup.players.map(p => p.name));
     return (faction === "puma" ? PUMA_NAMES : WOLF_NAMES).find(n => !used.has(n)) || (faction === "puma" ? "Puma " : "Wolf ") + (setup.players.length + 1);
   };
+  /* which tabs of the custom game have their finer options open; kept while the page is */
+  const more = { match: false, world: false };
   UI.custom = (setup, start) => {
     const o = setup.opts;
-    const pills = (key, list, fmt = v => v) => '<div class="row">' + list.map(v => '<button data-opt="' + key + '" data-v="' + v + '" data-f="' + key + v + '"' +
-      (String(o[key]) === String(v) ? ' class="on"' : "") + ">" + esc(fmt(v)) + "</button>").join("") + "</div>";
-    const opt = (label, inner, note = "") => '<div class="opt"><span>' + esc(label) + "</span>" + inner + "</div>" + (note ? '<p class="gk-note" style="margin:-4px 0 10px 162px">' + esc(note) + "</p>" : "");
+    const press = on => (on ? ' class="on"' : "") + ' aria-pressed="' + on + '"';
+    const pills = (key, list, fmt = v => v) => '<div class="row" role="group">' + list.map(v => '<button data-opt="' + key + '" data-v="' + v + '" data-f="' + key + v + '"' +
+      press(String(o[key]) === String(v)) + ">" + esc(fmt(v)) + "</button>").join("") + "</div>";
+    const opt = (label, inner, note = "") => '<div class="opt"><span>' + esc(label) + "</span>" + inner + "</div>" + (note ? '<p class="gk-note opt-note">' + esc(note) + "</p>" : "");
+    /* a tab's finer options, behind a switch that says how many there are and what's changed */
+    const finer = (tab, keys, html) => {
+      const changed = keys.filter(k2 => String(o[k2]) !== String(SP.DEFAULT_OPTS[k2])).length;
+      return '<button class="more" data-more="' + tab + '" data-f="more' + tab + '" aria-expanded="' + more[tab] + '">' + (more[tab] ? "Fewer options" : "More options") +
+        ' <span class="dim">' + keys.length + (changed ? ", " + changed + " changed" : "") + "</span></button>" + (more[tab] ? '<div class="finer">' + html() + "</div>" : "");
+    };
     const players = () => '<div class="players">' + setup.players.map((p, i) =>
       '<div class="player"><span class="sw" style="background:' + SP.COLOURS[i] + '"></span>' +
       '<input type="text" maxlength="14" data-name="' + i + '" value="' + esc(p.name) + '" aria-label="Tank ' + (i + 1) + ' name">' +
-      '<div class="seg"><button data-fac="' + i + '" data-v="puma" data-f="fp' + i + '"' + (p.faction === "puma" ? ' class="on"' : "") + ">Puma</button>" +
-      '<button data-fac="' + i + '" data-v="wolf" data-f="fw' + i + '"' + (p.faction === "wolf" ? ' class="on"' : "") + ">Wolf</button></div>" +
+      '<div class="seg" role="group" aria-label="Tank ' + (i + 1) + ' species"><button data-fac="' + i + '" data-v="puma" data-f="fp' + i + '"' + press(p.faction === "puma") + ">Puma</button>" +
+      '<button data-fac="' + i + '" data-v="wolf" data-f="fw' + i + '"' + press(p.faction === "wolf") + ">Wolf</button></div>" +
       '<select data-kind="' + i + '" aria-label="Who drives tank ' + (i + 1) + '"><option value="human"' + (p.kind === "human" ? " selected" : "") + ">Human</option>" +
       SP.AIS.map(a => '<option value="' + a.id + '"' + (p.kind === "ai" && p.ai === a.id ? " selected" : "") + ">" + a.name + "</option>").join("") + "</select>" +
       '<button class="x" data-del="' + i + '" aria-label="Remove tank ' + (i + 1) + '"' + (setup.players.length <= 2 ? " disabled" : "") + ">&times;</button></div>").join("") + "</div>" +
-      '<div class="row"><button data-add data-f="add"' + (setup.players.length >= 10 ? " disabled" : "") + ">Add a tank</button></div>" +
-      '<p class="gk-note">Two to ten tanks. Humans take turns at the one keyboard. ' + SP.AIS.map(a => "<b>" + a.name + "</b>: " + esc(a.note)).join(" ") + "</p>";
+      '<div class="row"><button data-add data-f="add"' + (setup.players.length >= 10 ? " disabled" : "") + ">Add a tank</button><span class=\"gk-note\">Two to ten. Humans take turns at the one keyboard.</span></div>" +
+      "<h3>Computer players</h3><dl class=\"ais\">" + SP.AIS.map(a => "<dt>" + a.name + "</dt><dd>" + esc(a.note) + "</dd>").join("") + "</dl>";
     const k = n => n >= 1e6 ? (n / 1e6) + "M" : n >= 1000 ? (n / 1000) + "k" : n;
     const match = () =>
       opt("Rounds", pills("rounds", [1, 3, 5, 10, 20, 50])) +
       opt("Starting cash", pills("cash", [0, 5000, 15000, 50000, 100000, 1000000], v => "$" + k(v))) +
-      opt("Interest", pills("interest", [0, 0.05, 0.1, 0.2], v => Math.round(v * 100) + "%")) +
-      opt("Arms level", pills("arms", [0, 1, 2, 3, 4]), "What the shop stocks: 0 is missiles, rollers and dirt; 4 is everything.") +
-      opt("Scoring", pills("scoring", Object.keys(SP.SCORING), v => SP.SCORING[v].name), SP.SCORING[o.scoring].note) +
       opt("Teams", pills("teams", [false, true], v => v ? "Pumas vs. Wolves" : "Every tank for itself"), o.teams ? "A round ends when one species is gone. Hurting your own kind costs." : "Puma or wolf is just who you are.") +
-      opt("Turn order", pills("order", ["random", "losers", "winners", "robin"], v => ({ random: "Random", losers: "Losers first", winners: "Winners first", robin: "Round robin" })[v])) +
-      opt("Play", pills("mode", ["sequential", "synchronous"], v => v[0].toUpperCase() + v.slice(1)), o.mode === "synchronous" ? "Everyone aims, then every shot flies at once." : "One shot at a time.");
+      opt("Arms level", pills("arms", [0, 1, 2, 3, 4]), "What the shop stocks: 0 is missiles, rollers and dirt; 4 is everything.") +
+      finer("match", ["interest", "scoring", "order", "mode"], () =>
+        opt("Interest", pills("interest", [0, 0.05, 0.1, 0.2], v => Math.round(v * 100) + "%")) +
+        opt("Scoring", pills("scoring", Object.keys(SP.SCORING), v => SP.SCORING[v].name), SP.SCORING[o.scoring].note) +
+        opt("Turn order", pills("order", ["random", "losers", "winners", "robin"], v => ({ random: "Random", losers: "Losers first", winners: "Winners first", robin: "Round robin" })[v])) +
+        opt("Play", pills("mode", ["sequential", "synchronous"], v => v[0].toUpperCase() + v.slice(1)), o.mode === "synchronous" ? "Everyone aims, then every shot flies at once." : "One shot at a time."));
+    const cap = v => v[0].toUpperCase() + v.slice(1);
     const world = () =>
-      opt("Wind", pills("wind", ["none", "constant", "changing"], v => v[0].toUpperCase() + v.slice(1))) +
-      opt("Strongest wind", pills("maxWind", [5, 10, 25, 50])) +
-      opt("Gravity", pills("gravity", [0.5, 0.75, 1, 1.25, 1.5, 2], v => v + "×")) +
-      opt("Air", pills("viscosity", [0, 5, 10, 20], v => v ? "thick " + v : "thin")) +
-      opt("Walls", pills("walls", SP.WALL_MODES, v => v[0].toUpperCase() + v.slice(1)), o.walls === "random" ? "One kind each round." : o.walls === "erratic" ? "A different kind every turn." : SP.WALLS[o.walls]) +
-      opt("Sky", pills("sky", ["random", ...SP.SKIES], v => v[0].toUpperCase() + v.slice(1))) +
-      opt("Land", pills("land", ["random", ...SP.LANDS], v => v[0].toUpperCase() + v.slice(1))) +
-      opt("Bumpiness", pills("bumpiness", [0, 25, 50, 75, 100])) +
-      opt("Hanging dirt", pills("suspend", [0, 25, 50, 100], v => v + "%"), "How often a blast leaves the dirt above it hanging in the air.") +
-      opt("Fall damage", pills("fallDamage", [true, false], v => v ? "On" : "Off"));
+      opt("Wind", pills("wind", ["none", "constant", "changing"], cap)) +
+      opt("Walls", pills("walls", SP.WALL_MODES, cap), o.walls === "random" ? "One kind each round." : o.walls === "erratic" ? "A different kind every turn." : SP.WALLS[o.walls]) +
+      opt("Sky", pills("sky", ["random", ...SP.SKIES], cap)) +
+      opt("Land", pills("land", ["random", ...SP.LANDS], cap)) +
+      finer("world", ["maxWind", "gravity", "viscosity", "bumpiness", "suspend", "fallDamage"], () =>
+        opt("Strongest wind", pills("maxWind", [5, 10, 25, 50])) +
+        opt("Gravity", pills("gravity", [0.5, 0.75, 1, 1.25, 1.5, 2], v => v + "×")) +
+        opt("Air", pills("viscosity", [0, 5, 10, 20], v => v ? "thick " + v : "thin")) +
+        opt("Bumpiness", pills("bumpiness", [0, 25, 50, 75, 100])) +
+        opt("Hanging dirt", pills("suspend", [0, 25, 50, 100], v => v + "%"), "How often a blast leaves the dirt above it hanging in the air.") +
+        opt("Fall damage", pills("fallDamage", [true, false], v => v ? "On" : "Off")));
+    const changed = () => Object.keys(SP.DEFAULT_OPTS).some(k2 => String(o[k2]) !== String(SP.DEFAULT_OPTS[k2]));
     return UI.open("Custom game", {
-      wide: true,
+      wide: true, cls: "custom",
       tabs: [["Tanks", players], ["Match", match], ["World", world]],
-      foot: () => '<span class="grow">' + setup.players.length + " tanks · " + o.rounds + " round" + (o.rounds === 1 ? "" : "s") + '</span><button class="primary" data-start>Start <kbd>Enter</kbd></button>',
+      foot: () => '<span class="grow">' + setup.players.length + " tanks · " + o.rounds + " round" + (o.rounds === 1 ? "" : "s") + "</span>" +
+        '<button data-reset data-f="reset"' + (changed() ? "" : " disabled") + ">Reset options</button>" +
+        '<button class="primary" data-start>Start <kbd>Enter</kbd></button>',
       onClick: (b, api) => {
-        if (b.dataset.opt) {
+        if (b.dataset.more) more[b.dataset.more] = !more[b.dataset.more];
+        else if (b.hasAttribute("data-reset")) Object.assign(o, SP.DEFAULT_OPTS);
+        else if (b.dataset.opt) {
           const cur = o[b.dataset.opt], v = b.dataset.v;
           o[b.dataset.opt] = typeof cur === "number" ? +v : typeof cur === "boolean" ? v === "true" : v;
         } else if (b.dataset.fac) {
@@ -307,7 +551,7 @@
         <p class="gk-note"><kbd>M</kbd> switches it anywhere; so does the speaker in the bar.</p>
         <h3>Animation speed</h3>
         <div class="row">${[[1, "Slow"], [2, "Normal"], [4, "Fast"]].map(([v, l]) => pill(prefs.speed === v, l, "speed:" + v)).join("")}</div>
-        <p class="gk-note">How fast shots fly and dirt falls. The computer players think at the same speed whatever this says.</p>
+        <p class="gk-note">How fast shots fly and dirt falls. Fast hurries the computer players' aiming too; on any speed, <kbd>Space</kbd> hurries one computer turn.</p>
         <h3>This browser</h3>
         <div class="row"><button data-set="forget" class="danger">Forget everything</button></div>
         <p class="gk-note">Clears what Scorched Puma keeps in this browser: a match in progress, your last custom game, and these settings.</p>`,
@@ -315,7 +559,7 @@
         const v = b.dataset.set;
         if (!v) return;
         if (v === "forget") {
-          if (await UI.ask("Forget everything Scorched Puma has saved in this browser: the match in progress, your last custom game and your settings? This cannot be undone.", "Forget everything")) SP.forgetEverything();
+          if (await UI.ask("Forget everything Scorched Puma has saved in this browser: the match in progress, your last custom game and your settings? This cannot be undone.", "Forget everything", "Forget everything?")) SP.forgetEverything();
           return;
         }
         const [key, val] = v.split(":");
@@ -331,19 +575,28 @@
   UI.help = (tab = 0) => UI.open("Help", {
     wide: true, tab,
     tabs: [
-      ["Playing", `<p>Every tank on the field is a puma crew or a wolf crew, and every one of them is out to be the last left. Take turns: set your <b>angle</b> and <b>power</b>, pick a weapon, and fire. Mind the <b>wind</b> in the bar; it pushes every shot.</p>
-        <p>Blasts dig craters, and the dirt above them falls. Tanks fall too: a parachute saves a long drop, and without one the fall hurts. A tank is destroyed at no health, and blows up where it stands.</p>
-        <p>A tank's health is also its strength: it fires no harder than ten times the health it has left. A <b>battery</b> gives some back.</p>
-        <p>Between rounds is the shop: <b>Puma Arms</b> for pumas, <b>Wolf Surplus</b> for wolves. Damage to an enemy pays, a kill pays more, and surviving the round pays most. Cash in hand earns interest.</p>
-        <p>The match is decided on score: a point for each kill, two for surviving a round, a point off for killing your own side or yourself.</p>
+      ["Playing", `<p>Every tank is a puma crew or a wolf crew, and every one of them is out to be the last left.</p>
+        <h3>Your turn</h3>
+        <ol><li>Set the <b>angle</b> (<kbd>←</kbd> <kbd>→</kbd>) and the <b>power</b> (<kbd>↑</kbd> <kbd>↓</kbd>). The arrow out of your barrel grows with the power, and its tip shows the angle and power. It is not where the shell lands.</li>
+        <li>Pick a weapon: click it under the field, or <kbd>1</kbd> to <kbd>0</kbd>, or <kbd>Tab</kbd>.</li>
+        <li>Fire with <kbd>Space</kbd>. Gravity pulls the shell down and the <b>wind</b> pushes it.</li>
+        <li>Read what happened: the line top left of the field, and a cross where it came down. <b>Aim again</b> (<kbd>A</kbd>) goes back to that aim, to correct from.</li></ol>
+        <h3>The field</h3>
+        <p>Blasts dig craters and the dirt above them falls. Tanks fall too: a <b>parachute</b> saves a long drop. A tank fires no harder than ten times the health it has left; a <b>battery</b> gives some back.</p>
+        <h3>Money and score</h3>
+        <p>Damage to an enemy pays, a kill pays more, surviving the round pays most; hurting yourself or your own side costs. Spend it between rounds at <b class="puma">Puma Arms</b> or <b class="wolf">Wolf Surplus</b>. The match goes to the best score: a point a kill, two for surviving a round, one off for an own goal.</p>
         <p class="gk-credit">${CREDIT}</p>`],
       ["Keys", '<table class="list">' + [
         [["←", "→"], "Turn the turret"], [["↑", "↓"], "Power up and down; hold to go faster, <kbd>Shift</kbd> for one at a time"],
-        [["PgUp", "PgDn"], "Power by tens"], [["Space", "Enter"], "Fire"], [["Tab"], "Next weapon (<kbd>Shift</kbd> for the one before)"],
+        [["PgUp", "PgDn"], "Power by tens"], [["Space", "Enter"], "Fire; on a computer player's turn, hurry it"],
+        [["1", "0"], "Load a weapon by its place in the strip (1 to 9, then 0)"], [["Tab"], "Next weapon (<kbd>Shift</kbd> for the one before)"],
+        [["W"], "All your weapons, large"], [["A"], "Aim again: back to the last shot's angle and power"],
         [["I"], "Items: shields, batteries, guidance, the target"], [["T"], "Next target, for guidance and Lazy Boy"],
         [["F"], "Drive on fuel; the arrows move the tank, F again to stop"], [["L"], "Aim aid on or off"],
+        [["F6"], "Into the console and back: there <kbd>Tab</kbd> moves and <kbd>Space</kbd> presses"],
         [["Esc", "P"], "Pause"], [["M"], "Sound"], [["?"], "Help"],
-      ].map(([k, w]) => kbdRow(k, w)).join("") + "</table><p class=\"gk-note\">The mouse aims too: press on the field and drag; the further from your tank, the more power. The wheel steps the power.</p>"],
+      ].map(([k, w]) => kbdRow(k, w)).join("") + "</table><p class=\"gk-note\">The mouse aims too: press anywhere on the field and the turret points there, with more power the further out you press; drag to fine-tune, and the wheel steps the power.</p>" +
+        "<h3>The console</h3><p>Under the field, and always yours: your tank's health, cash and score; your angle and power with <b>▲ ▼</b> steppers; your <b>last shot</b> and <b>Aim again</b>; the wind; your weapons and items. Click a weapon to load it, an item to use, raise or arm it; when there are more than fit, rest the pointer on them and a drawer slides up with the lot. On a computer player's turn it dims, and the line by Fire says who is aiming.</p>"],
       ["Weapons", '<table class="list"><tr><th>Weapon</th><th class="n">Price</th><th class="n">Arms</th></tr>' + SP.WEAPONS.map(w => "<tr><td>" + esc(w.name) + '<span class="d">' + esc(DESC[w.id]) + '</span></td><td class="n">' + (w.free ? "free" : SP.money(w.price) + " / " + w.bundle) + '</td><td class="n">' + w.arms + "</td></tr>").join("") + "</table>"],
       ["Items", '<table class="list"><tr><th>Item</th><th class="n">Price</th><th class="n">Arms</th></tr>' + SP.ITEMS.map(w => "<tr><td>" + esc(w.name) + '<span class="d">' + esc(DESC[w.id]) + '</span></td><td class="n">' + SP.money(w.price) + " / " + w.bundle + '</td><td class="n">' + w.arms + "</td></tr>").join("") + "</table>"],
       ["Computer players", '<table class="list">' + SP.AIS.map(a => "<tr><td><b>" + a.name + "</b></td><td>" + esc(a.note) + "</td></tr>").join("") + '</table><p class="gk-note">They aim by flying trial shots through the same physics you play in, wind and walls and all, then miss by as much as their type misses by.</p>'],

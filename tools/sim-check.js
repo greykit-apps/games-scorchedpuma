@@ -18,7 +18,8 @@ const check = (name, ok, more = "") => {
   else { fails++; console.log(`FAIL ${name}${more ? ": " + more : ""}`); }
 };
 
-/* a quiet two-tank world on flat land at row 300, no wind */
+/* a quiet two-tank world on flat land, no wind */
+const FLAT = Math.round(SP.H * 0.83);
 function scene(o = {}) {
   const s = G.newMatch({
     players: [
@@ -31,12 +32,12 @@ function scene(o = {}) {
   G.startRound(s);
   const t = s.terrain;
   t.px.fill(0);
-  for (let y = 300; y < t.h; y++) for (let x = 0; x < t.w; x++) t.px[y * t.w + x] = y === t.h - 1 ? T.BEDROCK : 5;
+  for (let y = FLAT; y < t.h; y++) for (let x = 0; x < t.w; x++) t.px[y * t.w + x] = y === t.h - 1 ? T.BEDROCK : 5;
   t.loose.fill(0); t.looseN = 0;
   s.wall = o.wall || "none";
   s.wind = o.wind || 0;
-  const xs = o.xs || [120, 520];
-  s.tanks.forEach((tk, i) => { tk.x = xs[i] ?? 60 + i * 50; tk.y = 300; });
+  const xs = o.xs || [180, 780];
+  s.tanks.forEach((tk, i) => { tk.x = xs[i] ?? 90 + i * 75; tk.y = FLAT; });
   s.order = { ids: s.tanks.map(t => t.id), i: 0, dead: [] };
   s.phase = "aim";
   s.events = [];
@@ -53,14 +54,14 @@ function resolve(s, limit = 20000) {
   const t = T.make(), r = SP.rng(1);
   T.generate(t, r, { land: "rolling", bumpiness: 60 });
   const n0 = T.count(t);
-  check("terrain generates land", n0 > t.w * 60);
-  const cut = T.carve(t, 320, T.surface(t, 320) + 10, 25);
+  check("terrain generates land", n0 > t.w * 90);
+  const cut = T.carve(t, 480, T.surface(t, 480) + 15, 38);
   check("carve removes what it says", T.count(t) === n0 - cut && cut > 0);
-  const add = T.fill(t, 200, 100, 15, 0, r);
+  const add = T.fill(t, 300, 150, 22, 0, r);
   check("fill adds what it says", T.count(t) === n0 - cut + add && add > 0);
   let passes = 0;
-  while (T.settle(t, 2) && passes < 2000) passes++;
-  check("falling dirt settles", passes < 2000, `${passes} passes`);
+  while (T.settle(t, 3) && passes < 3000) passes++;
+  check("falling dirt settles", passes < 3000, `${passes} passes`);
   check("falling dirt keeps every grain", T.count(t) === n0 - cut + add);
   let floating = 0;
   for (let x = 0; x < t.w; x++) { let air = false; for (let y = 0; y < t.h; y++) { const v = t.px[y * t.w + x]; if (!v && y > 0 && t.px[(y - 1) * t.w + x]) air = true; } if (air) floating++; }
@@ -76,12 +77,12 @@ function resolve(s, limit = 20000) {
   const hit = SP.AI.simulate(s, t, 45, 600);
   const v = Ph.speedFor(600), g = SP.PHYS.g, m = Tk.muzzle({ ...t, angle: 45 });
   /* range to the ground from the muzzle's height, by the formula */
-  const vx = v * Math.SQRT1_2, vy = v * Math.SQRT1_2, h = 300 - m.y;
+  const vx = v * Math.SQRT1_2, vy = v * Math.SQRT1_2, h = FLAT - m.y;
   const tFall = (vy + Math.sqrt(vy * vy + 2 * g * h)) / g, want = m.x + vx * tFall;
-  check("a shot lands where the formula says", Math.abs(hit.x - want) < 8, `landed ${hit.x.toFixed(1)}, formula ${want.toFixed(1)}`);
+  check("a shot lands where the formula says", Math.abs(hit.x - want) < 12, `landed ${hit.x.toFixed(1)}, formula ${want.toFixed(1)}`);
   s.wind = 20;
   const windy = SP.AI.simulate(s, t, 45, 600);
-  check("tail wind carries a shot further", windy.x > hit.x + 10);
+  check("tail wind carries a shot further", windy.x > hit.x + 15);
   s.wind = 0;
   for (const [wall, what] of [["none", "gone"], ["concrete", "wall"]]) {
     s.wall = wall;
@@ -136,14 +137,14 @@ for (const w of SP.WEAPONS) {
 {
   const s = scene();
   const a = s.tanks[0], b = s.tanks[1];
-  T.carve(s.terrain, b.x, 300 + 20, 22);
+  T.carve(s.terrain, b.x, FLAT + 30, 33);
   s.phase = "resolve";
   resolve(s);
-  check("a tank with no dirt under it falls, and is hurt", b.health < 100 && b.y > 300, `y ${b.y} health ${b.health}`);
+  check("a tank with no dirt under it falls, and is hurt", b.health < 100 && b.y > FLAT, `y ${b.y} health ${b.health}`);
   const s2 = scene();
   const c = s2.tanks[1];
   Tk.give(c, "parachute", 2);
-  T.carve(s2.terrain, c.x, 300 + 20, 22);
+  T.carve(s2.terrain, c.x, FLAT + 30, 33);
   s2.phase = "resolve";
   resolve(s2);
   check("a parachute saves a falling tank", c.health === 100 && c.inv.parachute === 1, `health ${c.health}`);
