@@ -407,9 +407,11 @@
       heroes = winners.slice(0, 4);
     } else heroes = winners.slice(0, 1);
     const quote = faction && heroes.length ? VICTORY[faction][Math.floor(Math.random() * VICTORY[faction].length)] : "";
-    const hero = '<div class="hero' + (faction ? " fac-" + faction : " none") + (final ? " final" : "") + '">' +
+    /* the last sheet takes the focus itself, not Play again: Enter by reflex,
+       after a run of Continue sheets, never throws the result away for a new match */
+    const hero = '<div class="hero' + (faction ? " fac-" + faction : " none") + (final ? " final" : "") + '"' + (final ? ' tabindex="-1" autofocus' : "") + ">" +
       (heroes.length ? '<div class="champs">' + heroes.map(t => portrait(t, final && heroes.length === 1 ? 4 : 3)).join("") + "</div>" : "") +
-      '<div class="said"><p class="head">' + esc(head) + "</p>" + (sub ? '<p class="sub">' + sub + "</p>" : "") +
+      '<div class="said">' + (final ? '<p class="over">' + (s.opts.rounds === 1 ? "The one round" : "All " + s.opts.rounds + " rounds") + " played</p>" : "") + '<p class="head">' + esc(head) + "</p>" + (sub ? '<p class="sub">' + sub + "</p>" : "") +
       (quote ? '<p class="quote">“' + esc(quote) + "”" + (heroes.length === 1 && heroes[0].name !== "You" ? " <span>" + esc(heroes[0].name) + "</span>" : "") + "</p>" : "") + "</div></div>";
     /* each human's round: how it ended for them, and what it paid */
     const humans = s.tanks.filter(t => t.kind === "human");
@@ -417,20 +419,21 @@
       '<div class="pay">' + paid(t) + '<span class="sum">This round <b>' + (t.earned + (t.interest || 0) < 0 ? "−" : "+") + SP.money(Math.abs(t.earned + (t.interest || 0))) + "</b> · cash " + SP.money(t.cash) + "</span></div></div>").join("");
     const rows = board.map((t, i) => '<tr class="' + (t.kind === "human" ? "me" : "") + '"><td class="rank">' + (i + 1) + "</td><td>" + who(t) + (last.winners.includes(t.id) ? ' <span class="win">survived</span>' : "") + "</td>" +
       '<td class="n">' + SP.money(t.earned) + '</td><td class="n">' + SP.money(t.interest || 0) + '</td><td class="n">' + SP.money(t.cash) + '</td><td class="n">' + t.kills + '</td><td class="n">' + t.score + "</td></tr>").join("");
-    const api = UI.open(final ? "Final standings" : "Round " + s.round + " of " + s.opts.rounds, {
+    const api = UI.open(final ? "Match over" : "Round " + s.round + " of " + s.opts.rounds, {
       wide: true, closable: false, cls: "scores",
       html: () => hero + yours +
         '<table class="list"><tr><th></th><th>Tank</th><th class="n">This round</th><th class="n">Interest</th><th class="n">Cash</th><th class="n">Kills</th><th class="n">Score</th></tr>' + rows + "</table>" +
         '<p class="gk-note">Score: a point a kill, two for surviving a round, a point off for killing a friend or yourself.</p>',
       foot: () => final
-        ? '<span class="grow"></span><button data-title>Title</button><button class="primary" data-again>Play again <kbd>Enter</kbd></button>'
+        ? '<span class="grow">The match is over. Play again starts a new one: ' + SP.money(s.opts.cash) + " each and nothing in stock.</span>" +
+          '<button data-title>Title</button><button class="primary" data-again>Play again</button>'
         : '<span class="grow">Next: the shop, then round ' + (s.round + 1) + '.</span><button class="primary" data-next>Continue <kbd>Enter</kbd></button>',
       onClick: b => {
         if (b.hasAttribute("data-next")) { UI.close(true); next("next"); }
         else if (b.hasAttribute("data-again")) { UI.close(true); next("again"); }
         else if (b.hasAttribute("data-title")) { UI.close(true); next("title"); }
       },
-      onKey: ev2 => { if (ev2.key === "Enter" && !(ev2.target.closest && ev2.target.closest("button"))) { ev2.preventDefault(); UI.close(true); next(final ? "again" : "next"); } },
+      onKey: ev2 => { if (!final && ev2.key === "Enter" && !(ev2.target.closest && ev2.target.closest("button"))) { ev2.preventDefault(); UI.close(true); next("next"); } },
     });
     drawPortraits(api.el, s);
     return api;
