@@ -232,6 +232,8 @@ body > .gk-sheet { z-index: 100; }
 .hero .said { min-width: 0; }
 .gk-sheet .hero .head { margin: 0; font-size: 22px; line-height: 1.2; font-weight: 700; color: var(--fac, var(--text)); letter-spacing: .02em; text-wrap: balance; }
 .gk-sheet .hero.final .head { font-size: 30px; }
+.gk-sheet .hero .over { margin: 0 0 4px; color: var(--ink); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; }
+.hero:focus { outline: none; }
 .gk-sheet .hero .sub { margin: 6px 0 0; color: var(--text); font-size: 13px; font-variant-numeric: tabular-nums; }
 .gk-sheet .hero .quote { margin: 8px 0 0; color: var(--text); font-size: 15px; font-style: italic; }
 .hero .quote span { font-style: normal; color: var(--ink); font-size: 12px; margin-left: 6px; }
