@@ -1,6 +1,14 @@
 # Scorched Puma: development
 
-How the game is put together and how to check a change. For what it is, running it and deploying it, see [README.md](README.md).
+How the game is put together and how to check a change. For what it is, see [README.md](README.md).
+
+## Running it
+
+Serve the folder rather than opening `index.html` from disk, since browsers restrict pages loaded from `file://`:
+
+```bash
+python3 -m http.server 8000
+```
 
 ## What's in here
 
