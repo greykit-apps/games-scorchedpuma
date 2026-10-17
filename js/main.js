@@ -79,7 +79,7 @@
       primary: saved ? "resume" : "quick",
       items: [
         saved && { act: "resume", label: "Resume game", key: "R", meta },
-        { act: "quick", label: "New quick game", key: "N", meta: "you and three wolves" },
+        { act: "quick", label: "New quick game", key: "N", meta: "you and seven others" },
         { act: "custom", label: "Custom game", key: "C", meta: "2 to 10 tanks, every option" },
         "gap",
         { act: "settings", label: "Settings", key: "S" },
@@ -170,12 +170,17 @@
     ],
     opts: { ...SP.DEFAULT_OPTS },
   });
+  /* eight tanks, every one for itself: the 1991 game was chaos */
   const quickSetup = () => ({
     players: [
       { name: "You", faction: "puma", kind: "human" },
       { name: "Grey Fang", faction: "wolf", kind: "ai", ai: "shooter" },
+      { name: "Catamount", faction: "puma", kind: "ai", ai: "tosser" },
       { name: "Howler", faction: "wolf", kind: "ai", ai: "tosser" },
+      { name: "Tawny", faction: "puma", kind: "ai", ai: "moron" },
       { name: "Lobo", faction: "wolf", kind: "ai", ai: "moron" },
+      { name: "Ghost Cat", faction: "puma", kind: "ai", ai: "poolshark" },
+      { name: "Fenris", faction: "wolf", kind: "ai", ai: "chooser" },
     ],
     opts: { ...SP.DEFAULT_OPTS, rounds: 5 },
   });
