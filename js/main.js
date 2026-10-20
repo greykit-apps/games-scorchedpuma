@@ -1,5 +1,11 @@
 /* Scorched Puma -- boot, title, the match from shop to standings, the loop.
  *
+ * The greykit.games integrated intro (games-meta STANDARD.md §14, the shared
+ * gk-intro.js over the canon @gk-title boot): the boot with its meow, a press
+ * to let the sound in where the browser wants one, then the default title
+ * fading up over computer tanks having at it, heard low and muffled behind
+ * it, with the Sound switch and the credit under the menu.
+ *
  * The engine (js/engine/*) knows nothing of the page; this file feeds it
  * commands, ticks it sixty times a second, and turns what it reports
  * (s.events) into sound, damage numbers and the tanks' remarks. */
@@ -15,8 +21,10 @@
   /* weak: 1.5's rule that damage weakens a tank's shots (SP.RULES.weaken); off unless switched on */
   const prefs = { talk: "sometimes", aim: false, speed: 2, coached: false, weak: false, ...SP.store.get(KEY_PREFS, {}) };
   SP.RULES.weaken = prefs.weak;
-  let muted = false;
-  try { muted = localStorage.getItem("scorchedpuma_muted_v1") === "1"; } catch (e) { /* no storage */ }
+  const KEY_MUTED = "scorchedpuma_muted_v1";
+  const readFlag = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : v === "1"; } catch (e) { return d; } };
+  const writeFlag = (k, on) => { try { localStorage.setItem(k, on ? "1" : "0"); } catch (e) { /* no storage */ } };
+  let muted = readFlag(KEY_MUTED, false);
   SP.Sfx.muted = muted;
 
   const game = {
@@ -31,15 +39,22 @@
     SP.Sfx.unlock();
     muted = !muted;
     SP.Sfx.setMuted(muted);
-    try { localStorage.setItem("scorchedpuma_muted_v1", muted ? "1" : "0"); } catch (e) { /* no storage */ }
+    writeFlag(KEY_MUTED, muted);
     syncSound();
     if (!muted) SP.Sfx.play("blip");
   }
+  /* the bar's speaker, and the title's switch */
   function syncSound() {
     const b = $("snd");
     b.setAttribute("aria-pressed", String(!muted));
     b.classList.toggle("muted", muted);
+    if (game.sw) game.sw.refresh();
   }
+  /* the title's Sound switch (§14), which is M; no music, so no Music switch */
+  const toggles = {
+    sound: { get: () => !muted, set: on => { if (on === muted) toggleMute(); } },
+  };
+  const tick = () => gkTick(SP.Sfx.ctx(), SP.Sfx.fx());
 
   /* Settings' "Forget everything" (STANDARD.md §2): every key the game owns,
      found by its prefix, and only those -- every game on greykit.com shares
@@ -89,13 +104,15 @@
       scene: true
     };
   }
-  function openTitle() {
+  /* integrate: the credit under the menu, the switches, the ticks (§14);
+     the intro does it itself the first time */
+  function openTitle(integrate = true) {
     game.mode = "title";
     game.s = null;
     game.paused = false;
     const t = $("title");
     t.innerHTML = titleHTML(titleCfg());
-    t.querySelector(".gk-name h1").insertAdjacentHTML("afterend",
+    t.querySelector("h1").insertAdjacentHTML("afterend",
       '<p class="gk-sub"><span class="p">Pumas</span> vs. <span class="w">Wolves</span> · after Scorched Earth, 1991</p>');
     t.hidden = false;
     $("game").hidden = true;
@@ -104,6 +121,7 @@
     t.querySelector(".scene").appendChild(cv);
     game.scene = { r: new SP.Renderer(cv), s: null, ai: null, fx: { floats: [], bubbles: [] } };
     attractRound();
+    if (integrate) game.sw = gkIntegrate(t.querySelector(".gk-title"), { toggles, tick });
   }
   function titleKey(ev) {
     const k = ev.key;
@@ -156,7 +174,8 @@
     if (s.phase === "aim") aiStep(sc);
     else if (s.phase === "resolve") { G.tick(s); G.tick(s); }
     else { if (!sc.wait) sc.wait = 90; if (--sc.wait === 0) attractRound(); }
-    handleEvents(sc, false);
+    /* heard once the intro has brought the title in, never under the boot */
+    handleEvents(sc, game.entering === false && "far");
     tickFx(sc.fx);
   }
 
@@ -198,6 +217,7 @@
     H.coach(null);
     $("title").hidden = true;
     $("title").innerHTML = "";
+    game.sw = null;
     $("game").hidden = false;
     document.body.classList.remove("on-title");
     fit();
@@ -326,9 +346,11 @@
   }
 
   /* ---- what the engine reports ---- */
-  function handleEvents(ctx, loud) {
+  /* sound: true for the match, "far" for the battle behind the title (low
+     and muffled), false for none */
+  function handleEvents(ctx, sound) {
     const s = ctx.s, fx = ctx.fx, r = ctx.r || game.r;
-    const play = n => { if (loud) SP.Sfx.play(n); };
+    const play = n => { if (sound) SP.Sfx.play(n, sound === "far"); };
     for (const e of s.events) {
       if (ctx === game) track(s, e);
       switch (e.e) {
@@ -341,7 +363,7 @@
           break;
         }
         case "boom":
-          if (loud) SP.Sfx.boom(e.r, e.riot);
+          if (sound) SP.Sfx.boom(e.r, e.riot, sound === "far");
           if (e.r >= 25 && !e.riot) r.shake = Math.min(9, r.shake + e.r / 9);
           if (e.r >= 60) r.flash = 0.35;
           break;
@@ -606,6 +628,8 @@
   document.addEventListener("keydown", ev => {
     SP.Sfx.unlock();
     if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
+    /* a key on the boot is the intro's: it continues, and does nothing else */
+    if (document.querySelector(".gk-boot")) return;
     if (!ev.repeat && konamiKey(ev)) { ev.preventDefault(); return; }
     if (UI.key(ev)) return;
     if (document.querySelector(".gk-sheet")) return;        // a canon question is up: it has the keys
@@ -679,20 +703,40 @@
   if (/[?&]debug(=|&|$)/.test(location.search)) globalThis.SPDEBUG = game;
 
   /* ---- boot ---- */
+  /* The title's entrance, in ms from the title's arrival, when the battle
+   * behind it starts to be heard: "Scorched" then "Puma" decoding, then the
+   * menu. */
+  const INTRO = { name: 500, step: 650, menu: 2200, done: 3400 };
   function boot() {
     injectTitleCSS();
     syncSound();
     game.r = new SP.Renderer($("field"));
+    const q = new URLSearchParams(location.search);
     const small = matchMedia("(max-width: 759px), (max-height: 479px)").matches;
     const saved = SP.store.get(KEY_MATCH, null);
-    const run = small ? { finish: async () => {}, cancel() {} } : runBoot({ lines: [bootReloadLine(), "terrain: seeded", "puma arms: open"] });
-    openTitle();
-    run.finish([saved ? "a match in progress" : "wolf surplus: open"]).then(() => revealTitle());
+    const lines = [bootReloadLine(), "terrain: seeded", "puma arms: open"], more = [saved ? "a match in progress" : "wolf surplus: open"];
+    /* the integrated intro, but not on a small screen (the page asks for a
+       computer) or in the ?test sandbox */
+    if (small || q.has("test")) { openTitle(); revealTitle(); }
+    else {
+      /* the boot's meow at canon's own level, straight out rather than
+         through the game's quieter effects */
+      const intro = startIntro({ lines, audio: SP.Sfx.ctx, bootSound: (ac, out, o) => { if (!muted) gkBootSound(ac, ac.destination, o); } });
+      game.entering = true;
+      openTitle(false);
+      intro.finish({
+        more, name: "decode", timing: INTRO, toggles, tick,
+        /* ?hold=always holds for the press even where the browser would
+           already play sound (a launch from the arcade, the in-app browser) */
+        hold: q.get("hold") === "always" ? "always" : "auto",
+        onContinue: () => SP.Sfx.unlock(),
+        onTitle: () => { game.entering = false; },
+      }).then(r => { game.sw = r.toggles; });
+    }
     requestAnimationFrame(frame);
     /* ?test=<weapon>: a sandbox to try weapons in, nothing saved */
     const test = new URLSearchParams(location.search).get("test");
     if (test) {
-      run.cancel();
       game.setup = { players: [{ name: "You", faction: "puma", kind: "human" }, { name: "Target", faction: "wolf", kind: "ai", ai: "moron" }, { name: "Dummy", faction: "wolf", kind: "ai", ai: "moron" }],
         opts: { rounds: 99, cash: 0, order: "robin", wind: "none" } };
       enterPlay();

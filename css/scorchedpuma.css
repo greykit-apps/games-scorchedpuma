@@ -187,13 +187,19 @@ a { color: var(--steel); }
 .say::after { content: ""; position: absolute; top: 100%; left: var(--tail, 50%); margin-left: -8px;
   border: 8px solid transparent; border-top-color: #f6f4ee; border-bottom: 0; }
 
-/* ---- the title: the canon block's screen, the attract mode behind it ---- */
+/* ---- the title: the canon block's default screen (v0.4), the attract mode
+   behind it, and gk-intro's switches and credit (js/main.js) ---- */
 #title { position: fixed; inset: 0; z-index: 90; overflow-y: auto; }
 body.on-title #game { visibility: hidden; }
 .gk-title > .scene canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; }
-.gk-title .gk-sub { margin-top: 10px; color: var(--ink); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; text-align: center; }
-.gk-title .gk-sub .p { color: var(--sp-puma); }
-.gk-title .gk-sub .w { color: var(--sp-wolf); }
+/* under #title, since the canon's stylesheet is injected after this one; the
+   column a little wider than the canon's, as monospace runs wide, so the sub
+   holds one line and Custom game's meta shows whole */
+#title .gk-title > main { width: min(660px, 100%); }
+#title .gk-menu, #title .gk-title.gki main > footer { width: min(540px, 100%); }
+#title .gk-sub { font-size: 12px; letter-spacing: .14em; white-space: nowrap; }
+#title .gk-sub .p { color: var(--sp-puma); }
+#title .gk-sub .w { color: var(--sp-wolf); }
 
 /* ---- sheets: Settings, Help, the shop and the rest, over the game or the title ---- */
 body > .gk-sheet { z-index: 100; }
