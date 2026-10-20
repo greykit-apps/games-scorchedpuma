@@ -1,27 +1,50 @@
 /* Scorched Puma -- every sound, made in Web Audio as it plays: square waves,
  * sweeps and filtered noise, the PC-speaker-and-Sound-Blaster palette.
- * Nothing is recorded or fetched. */
+ * Nothing is fetched; the one recording is the boot's meow, which
+ * js/gk-intro.js carries in itself.
+ *
+ * One switch, Sound (games-meta STANDARD.md §8): out, the master. Under it,
+ * far: the battle behind the title, heard low and muffled through a wall. */
 (() => {
   const SP = globalThis.SP;
   const S = SP.Sfx = { muted: false };
-  let ac = null, out = null, noise = null;
+  let ac = null, out = null, far = null, noise = null;
+  /* where the sound being made goes: out, or far for the title's battle */
+  let dest = null;
 
+  /* the context and its buses, made once; not resumed here, since the intro
+     asks the browser first whether the page may play yet */
+  const make = () => {
+    if (ac) return ac;
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      ac = new AC();
+      out = ac.createGain();
+      out.gain.value = S.muted ? 0 : 0.42;
+      out.connect(ac.destination);
+      far = ac.createGain();
+      far.gain.value = 0.3;
+      const muffle = ac.createBiquadFilter();
+      muffle.type = "lowpass";
+      muffle.frequency.value = 900;
+      muffle.Q.value = 0.5;
+      far.connect(muffle);
+      muffle.connect(out);
+      const n = ac.sampleRate * 1.5;
+      noise = ac.createBuffer(1, n, ac.sampleRate);
+      const d = noise.getChannelData(0);
+      for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+    } catch (e) { ac = null; }
+    return ac;
+  };
+  S.ctx = make;
+  /* the effects' way out, for the intro's ticks */
+  S.fx = () => out;
   S.unlock = () => {
     try {
-      if (!ac) {
-        const AC = window.AudioContext || window.webkitAudioContext;
-        if (!AC) return;
-        ac = new AC();
-        out = ac.createGain();
-        out.gain.value = S.muted ? 0 : 0.42;
-        out.connect(ac.destination);
-        const n = ac.sampleRate * 1.5;
-        noise = ac.createBuffer(1, n, ac.sampleRate);
-        const d = noise.getChannelData(0);
-        for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
-      }
-      if (ac.state === "suspended") ac.resume();
-    } catch (e) { ac = null; }
+      if (make() && ac.state !== "running") ac.resume().catch(() => {});
+    } catch (e) { /* no sound */ }
   };
   S.setMuted = m => {
     S.muted = m;
@@ -36,7 +59,7 @@
     o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + ms / 1000);
     g.gain.setValueAtTime(vol, t);
     g.gain.exponentialRampToValueAtTime(0.001, t + ms / 1000);
-    o.connect(g); g.connect(out);
+    o.connect(g); g.connect(dest || out);
     o.start(t); o.stop(t + ms / 1000 + 0.02);
   };
   /* filtered noise: a blast, a hiss, a rumble */
@@ -47,7 +70,7 @@
     if (sweep) f.frequency.exponentialRampToValueAtTime(Math.max(30, sweep), t + ms / 1000);
     g.gain.setValueAtTime(vol, t);
     g.gain.exponentialRampToValueAtTime(0.001, t + ms / 1000);
-    src.connect(f); f.connect(g); g.connect(out);
+    src.connect(f); f.connect(g); g.connect(dest || out);
     src.start(t, Math.random()); src.stop(t + ms / 1000 + 0.02);
   };
 
@@ -84,10 +107,14 @@
     lose: () => [392, 330, 262].forEach((f, i) => tone(f, f * 0.98, 220, "square", 0.08, i * 0.18)),
   };
 
-  S.play = name => {
-    if (!ac || S.muted || !SOUNDS[name]) return;
+  /* farOff: through far, low and muffled, as the battle behind the title */
+  S.play = (name, farOff = false) => {
+    if (!ac || ac.state !== "running" || S.muted || !SOUNDS[name]) return;
+    dest = farOff ? far : out;
     try { SOUNDS[name](); } catch (e) { /* a sound is never worth an error */ }
+    dest = null;
   };
   /* a blast's sound by its size */
-  S.boom = (r, riot) => S.play(riot ? "riotboom" : r >= 60 ? "nuke" : r >= 30 ? "big" : "small");
+  S.boom = (r, riot, farOff) => S.play(riot ? "riotboom" : r >= 60 ? "nuke" : r >= 30 ? "big" : "small", farOff);
+
 })();

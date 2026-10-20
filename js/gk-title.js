@@ -1,8 +1,10 @@
-/* @gk-title-begin v0.3 -- greykit.games canon (games-meta STANDARD.md §3),
- * byte-identical in every Tactical game. The copy of record is games-meta's
- * canon/gk-title.js: change it there, bump the version, copy it to all, and
- * tools/diff-standard.sh says where it differs. Plain script, no imports or
- * exports, so a single-file game can paste it into a classic <script>. */
+/* @gk-title-begin v0.4 -- greykit.games canon (games-meta STANDARD.md §3),
+ * in every Tactical game. The copy of record is games-meta's
+ * canon/gk-title.js: change it there and bump the version, never in one game.
+ * The boot is the rule -- every game's matches canon's, and
+ * tools/diff-standard.sh says where one differs. The title is the default:
+ * a game keeps the version it took. Plain script, no imports or exports, so
+ * a single-file game can paste it into a classic <script>. */
 
 /* greykit.com's mark: the right half of the face, flat cut on the left
  * (greykitweb/assets/greykit-mark.png at 240px). */
@@ -70,48 +72,73 @@ const TITLE_CSS = `
 @keyframes gk-glint{0%{opacity:1;background-position:120% 0}100%{opacity:1;background-position:-20% 0}}
 @keyframes gk-scan{0%{top:0;opacity:1}100%{top:100%;opacity:.2}}
 
-/* ---- title ---- */
-.gk-title{position:relative;min-height:100dvh;display:flex;flex-direction:column;align-items:center;
-  padding:56px 16px}
+/* ---- title: the game's picture behind; down the left, the name, a line
+   under it, and the menu in a panel of its own -- a key, the item, what it
+   says about itself, and Settings, Help and About on one row under the rest.
+   Airborne Puma's and Raid on Puma Bay's title, made the default.
+   A game colours it with these, set on .gk-title or anywhere above it; each
+   falls back to the palette: --gk-title-ink (the name, a lit row),
+   --gk-title-hi (the name's second line), --gk-title-focus (the row with
+   the focus; --gk-title-hi if left out), --gk-title-dim,
+   --gk-title-panel, --gk-title-line, and --gk-title-font. ---- */
+.gk-title{--t-ink:var(--gk-title-ink,var(--text));--t-hi:var(--gk-title-hi,var(--accent));--t-focus:var(--gk-title-focus,var(--t-hi));--t-dim:var(--gk-title-dim,var(--dim));
+  --t-panel:var(--gk-title-panel,color-mix(in srgb,var(--panel) 92%,transparent));--t-line:var(--gk-title-line,var(--line));
+  --t-x:clamp(16px,7vw,120px);
+  position:relative;min-height:100dvh;display:flex;flex-direction:column;font-family:var(--gk-title-font,inherit)}
 .gk-title>.scene{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;
   background:linear-gradient(#05070f 0%,#070b17 40%,#0c1020 68%,#181622 88%,#231a17 100%)}
-.gk-title>.scene svg{display:block;width:100%;height:100%}
-/* a shade at the top for the title and menu, and at the foot for the credit */
+.gk-title>.scene>svg,.gk-title>.scene>canvas{display:block;width:100%;height:100%}
+/* a shade down the left for the name and menu, and at the foot for the credit */
 .gk-title>.gk-shade{position:fixed;inset:0;z-index:0;pointer-events:none;
-  background:linear-gradient(rgba(5,7,15,.82) 0%,rgba(5,7,15,.55) 38%,rgba(5,7,15,0) 72%),
-    linear-gradient(transparent calc(100% - 90px),rgba(5,7,15,.85))}
-.gk-title>main{position:relative;z-index:1}
-.gk-title.gk-rise>main{animation:gk-rise .5s cubic-bezier(.22,1,.36,1) both}
-@keyframes gk-rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-/* the menu sits in the middle of the screen, and the name above it: three
-   rows, the outer two sharing what is left over */
-.gk-title main{flex:1;width:100%;display:grid;grid-template-rows:1fr auto 1fr;justify-items:center}
-.gk-title .gk-name{align-self:end;display:flex;flex-direction:column;align-items:center;width:100%}
-.gk-title h1{margin:6px 0 0;font-size:clamp(26px,6vw,42px);font-weight:600;letter-spacing:.24em;padding-left:.24em;text-transform:uppercase;
-  text-align:center;color:var(--accent);text-shadow:0 0 22px rgba(84,242,255,.35);min-height:1.2em}
-.gk-title .gk-rule{width:min(320px,80vw);height:1px;margin:26px 0 22px;
-  background:linear-gradient(90deg,transparent,var(--lit),transparent)}
-.gk-menu{display:flex;flex-direction:column;gap:8px;width:min(340px,100%)}
-.gk-menu .gk-gap{height:6px}
-.gk-menu button{display:flex;align-items:center;gap:12px;width:100%;min-height:42px;padding:0 14px;
-  font-family:inherit;font-size:14px;letter-spacing:.08em;text-transform:uppercase;text-align:left;
-  color:var(--text);background:var(--panel);border:1px solid var(--line);border-radius:2px;
-  transition:border-color .15s,background .15s,color .15s}
-.gk-menu button:hover:not(:disabled){border-color:var(--lit);background:var(--panel2)}
-.gk-menu button:focus-visible{outline:none;border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+  background:linear-gradient(90deg,color-mix(in srgb,var(--bg) 86%,transparent) 0%,color-mix(in srgb,var(--bg) 62%,transparent) 32%,
+    color-mix(in srgb,var(--bg) 10%,transparent) 60%,transparent 72%),
+    linear-gradient(transparent calc(100% - 90px),color-mix(in srgb,var(--bg) 60%,transparent))}
+.gk-title>main{position:relative;z-index:1;flex:1;display:flex;flex-direction:column;justify-content:center;
+  box-sizing:border-box;width:min(560px,100%);padding:32px 16px 72px var(--t-x)}
+.gk-title h1{margin:0;font-size:clamp(44px,6.4vw,92px);line-height:.9;font-weight:700;letter-spacing:.005em;text-transform:uppercase;
+  color:var(--t-ink);text-shadow:0 4px 28px rgba(0,0,0,.45)}
+.gk-title h1 span{display:block}
+.gk-title h1 span+span{color:var(--t-hi)}
+.gk-title .gk-sub{margin:16px 0 0;font-size:14px;font-weight:600;letter-spacing:.32em;text-transform:uppercase;color:var(--t-dim)}
+.gk-menu{display:flex;flex-direction:column;box-sizing:border-box;width:min(460px,100%);margin-top:30px;padding:8px 0;
+  background:var(--t-panel);border:1px solid var(--t-line);border-radius:8px;box-shadow:0 18px 50px rgba(0,0,0,.45)}
+.gk-menu button{position:relative;display:flex;align-items:center;gap:14px;width:100%;height:50px;padding:0 22px;
+  font:inherit;font-size:20px;font-weight:500;text-align:left;color:color-mix(in srgb,var(--t-ink) 86%,transparent);
+  background:transparent;border:0;border-radius:0;cursor:pointer}
 .gk-menu .gk-lbl{flex:none;white-space:nowrap}
-.gk-menu .gk-meta{flex:1;min-width:0;text-align:right;font-size:11px;letter-spacing:0;text-transform:none;
-  color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.gk-menu kbd,.gk-sheet kbd{font:inherit;font-size:11px;color:var(--dim);border:1px solid var(--line);border-radius:2px;
-  padding:0 4px;min-width:18px;text-align:center;display:inline-block;letter-spacing:0}
-.gk-menu button.gk-primary{color:var(--bg);background:var(--accent);border-color:var(--accent);font-weight:600}
-.gk-menu button.gk-primary:hover:not(:disabled){background:#8af6ff;border-color:#8af6ff}
-.gk-menu button.gk-primary kbd{color:var(--bg);border-color:rgba(5,7,15,.35)}
-.gk-menu button.gk-primary .gk-meta{color:rgba(5,7,15,.7)}
-/* pinned to the foot, with the same room kept top and bottom, so the menu's
-   middle is the screen's */
-.gk-title>footer{position:absolute;z-index:1;left:16px;right:16px;bottom:20px;font-size:12px;color:var(--dim);text-align:center}
+.gk-menu .gk-meta{margin-left:auto;min-width:0;font-size:15px;color:color-mix(in srgb,var(--t-dim) 80%,transparent);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gk-menu kbd{flex:none;font:inherit;font-size:15px;min-width:26px;padding:1px 5px;text-align:center;color:var(--t-dim);
+  border:1px solid var(--t-line);border-radius:3px}
+.gk-menu .gk-primary{color:var(--t-ink);font-weight:600}
+.gk-menu button:hover{color:var(--t-ink);background:color-mix(in srgb,var(--t-focus) 8%,transparent)}
+/* the row with the focus: a pointer at its left edge and a wash fading out
+   across it; :focus and not :focus-visible, so the default shows it too */
+.gk-menu button:focus{outline:none;color:var(--t-ink);font-weight:600;
+  background:linear-gradient(90deg,color-mix(in srgb,var(--t-focus) 26%,transparent),color-mix(in srgb,var(--t-focus) 6%,transparent) 75%,transparent)}
+.gk-menu button:focus::before{content:"";position:absolute;left:7px;top:50%;margin-top:-6px;
+  border-left:7px solid var(--t-focus);border-top:6px solid transparent;border-bottom:6px solid transparent}
+.gk-menu button:focus kbd{color:var(--t-ink);border-color:var(--t-focus)}
+.gk-menu button:focus .gk-meta{color:var(--t-dim)}
+.gk-menu .gk-util{display:flex;margin-top:6px;padding-top:6px;border-top:1px solid color-mix(in srgb,var(--t-line) 60%,transparent)}
+.gk-menu .gk-util button{flex:1 1 auto;width:auto;min-width:0;height:44px;font-size:16px;gap:10px;padding:0 14px}
+.gk-menu .gk-util button:first-child{padding-left:22px}
+.gk-menu .gk-util kbd{font-size:13px;min-width:22px}
+/* the menu arriving, a line at a time; the name decodes as it does */
+.gk-title.gk-rise .gk-sub{animation:gk-rise .5s cubic-bezier(.22,1,.36,1) both}
+.gk-title.gk-rise .gk-pr{animation:gk-pr .32s cubic-bezier(.2,.8,.2,1) calc(var(--i) * 45ms) both}
+@keyframes gk-rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes gk-pr{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.gk-title.gk-rise .gk-sub,.gk-title.gk-rise .gk-pr{animation:none}}
+.gk-title>footer{position:absolute;z-index:1;left:var(--t-x);right:16px;bottom:24px;font-size:13px;color:var(--t-dim)}
 .gk-credit a{color:var(--steel)}
+/* a phone: the shade covers the whole picture, and the row of three keeps
+   its words and drops its keys, which a phone has none of */
+@media (max-width:640px){
+  .gk-title>.gk-shade{background:color-mix(in srgb,var(--bg) 66%,transparent)}
+  .gk-menu .gk-util button,.gk-menu .gk-util button:first-child{justify-content:center;padding:0 6px}
+  .gk-menu .gk-util kbd{display:none}
+}
 
 /* ---- settings, help and about, over the title ---- */
 .gk-sheet{position:fixed;inset:0;z-index:50;display:grid;place-items:center;background:rgba(3,5,10,.9);padding:16px}
@@ -126,6 +153,8 @@ const TITLE_CSS = `
 .gk-sheet .gk-body h3{margin:16px 0 6px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);font-weight:600}
 .gk-sheet .gk-body h3:first-child{margin-top:0}
 .gk-sheet .gk-body ol,.gk-sheet .gk-body ul{margin:0 0 10px;padding-left:20px}
+.gk-sheet kbd{font:inherit;font-size:11px;color:var(--dim);border:1px solid var(--line);border-radius:2px;
+  padding:0 4px;min-width:18px;text-align:center;display:inline-block;letter-spacing:0}
 .gk-sheet .gk-body table{border-collapse:collapse;margin:0 0 10px}
 .gk-sheet .gk-body td{padding:3px 12px 3px 0;vertical-align:top}
 .gk-sheet .gk-body a{color:var(--steel)}
@@ -189,30 +218,52 @@ function runBoot({ lines = [] } = {}) {
 
 /**
  * The title screen's markup, for a game that draws its own screens: the same
- * HTML mountTitle puts in. cfg is mountTitle's name, items and primary;
- * scene: true leaves a .scene for the game's backdrop, and a game whose
- * backdrop is already drawn behind its pages leaves it out.
+ * HTML mountTitle puts in. cfg is mountTitle's name, lines, sub, items and
+ * primary; scene: true leaves a .scene for the game's backdrop, and a game
+ * whose backdrop is already drawn behind its pages leaves it out. The items
+ * before the "gap" are the menu's rows, with their meta; the ones after it
+ * share the row under them, without.
  */
 function titleHTML(cfg) {
-  const items = cfg.items.filter(Boolean);
+  const items = cfg.items.filter(Boolean), gap = items.indexOf("gap");
+  const rows = gap < 0 ? items : items.slice(0, gap), util = gap < 0 ? [] : items.slice(gap + 1);
+  let i = 0;
+  const btn = (it, meta) => '<button data-act="' + it.act + '" class="gk-pr' + (it.act === cfg.primary ? " gk-primary" : "") + '" style="--i:' + i++ +
+    '"><kbd>' + escHTML(it.key) + '</kbd><span class="gk-lbl">' + escHTML(it.label) + "</span>" +
+    (meta && it.meta ? '<span class="gk-meta">' + escHTML(it.meta) + "</span>" : "") + "</button>";
   return '<div class="gk-title">' + (cfg.scene ? '<div class="scene" aria-hidden="true"></div>' : "") + '<div class="gk-shade" aria-hidden="true"></div>' +
-    '<main><div class="gk-name"><h1 aria-label="' + escHTML(cfg.name) + '">' + escHTML(cfg.name) + '</h1><div class="gk-rule"></div></div><nav class="gk-menu" aria-label="Main menu">' +
-    items.map(it => it === "gap" ? '<div class="gk-gap"></div>' :
-      '<button data-act="' + it.act + '"' + (it.act === cfg.primary ? ' class="gk-primary"' : "") + "><kbd>" + escHTML(it.key) + '</kbd><span class="gk-lbl">' +
-      escHTML(it.label) + "</span>" + (it.meta ? '<span class="gk-meta">' + escHTML(it.meta) + "</span>" : "") + "</button>").join("") +
+    '<main><h1 aria-label="' + escHTML(cfg.name) + '">' + titleLines(cfg).map(l => '<span data-t="' + escHTML(l) + '">' + escHTML(l) + "</span>").join("") + "</h1>" +
+    (cfg.sub ? '<p class="gk-sub">' + escHTML(cfg.sub) + "</p>" : "") +
+    '<nav class="gk-menu" aria-label="Main menu">' + rows.map(it => btn(it, true)).join("") +
+    (util.length ? '<div class="gk-util">' + util.map(it => btn(it, false)).join("") + "</div>" : "") +
     '</nav></main><footer><span class="gk-credit">Built by <a href="https://greykit.com/" target="_blank" rel="noopener">greykit.com</a></span></footer></div>';
 }
 
+/* The name's lines: the game's own, or the name broken once, at the space
+ * nearest its middle -- "Raid on / Puma Bay", "Airborne / Puma". */
+function titleLines(cfg) {
+  if (cfg.lines) return cfg.lines;
+  const n = cfg.name, mid = n.length / 2;
+  let at = -1;
+  for (let i = 0; i < n.length; i++) if (n[i] === " " && (at < 0 || Math.abs(i - mid) < Math.abs(at - mid))) at = i;
+  return at < 0 ? [n] : [n.slice(0, at), n.slice(at + 1)];
+}
+
 /* the name decodes out of noise once, as the screen arrives -- by the
- * clock, not by ticks, so a throttled background tab still ends on time */
-function decodeTitle(h1, text) {
+ * clock, not by ticks, so a throttled background tab still ends on time.
+ * Each line decodes in its own span; an h1 without them, as itself. */
+function decodeTitle(h1) {
   if (reduced()) return;
+  const spans = [...h1.querySelectorAll("span[data-t]")];
+  const parts = spans.length ? spans.map(s => [s, s.dataset.t]) : [[h1, h1.getAttribute("aria-label")]];
   const glyphs = "▚▞▖▗▘▝#/\\<>=+", t0 = performance.now(), ms = 400;
   const t = setInterval(() => {
     const p = (performance.now() - t0) / ms;
-    if (!h1.isConnected || p >= 1) { clearInterval(t); h1.textContent = text; return; }
-    const done = Math.floor(text.length * p);
-    h1.textContent = text.slice(0, done) + [...text.slice(done)].map(c => c === " " ? " " : glyphs[Math.random() * glyphs.length | 0]).join("");
+    if (!h1.isConnected || p >= 1) { clearInterval(t); for (const [el, text] of parts) el.textContent = text; return; }
+    for (const [el, text] of parts) {
+      const done = Math.floor(text.length * p);
+      el.textContent = text.slice(0, done) + [...text.slice(done)].map(c => c === " " ? " " : glyphs[Math.random() * glyphs.length | 0]).join("");
+    }
   }, 28);
 }
 
@@ -227,13 +278,12 @@ function bootReloadLine() {
   return "reload <b>" + escHTML(location.pathname.replace(/index\.html$/, "")) + "</b>";
 }
 
-/* The entrance: the menu rises, the name decodes, the default is focused.
+/* The entrance: the menu prints in, the name decodes, the default is focused.
  * t is the .gk-title (the page's, if left out); the name is read off the h1. */
 function revealTitle(t = document.querySelector(".gk-title")) {
   if (!t) return;
   t.classList.add("gk-rise");
-  const h1 = t.querySelector("h1");
-  decodeTitle(h1, h1.getAttribute("aria-label"));
+  decodeTitle(t.querySelector("h1"));
   const b = t.querySelector(".gk-primary") || t.querySelector(".gk-menu button");
   if (b) b.focus({ preventScroll: true });
 }
@@ -247,12 +297,21 @@ function titleKeyButton(menu, key) {
   return bs.find(b => kbd(b).toLowerCase() === k) || ((k === "h" || k === "/") && bs.find(b => kbd(b) === "?")) || null;
 }
 
-/* ArrowDown / ArrowUp through the menu, wrapping. true when the key was one. */
+/* ArrowDown / ArrowUp through the menu, wrapping, a row of several buttons
+ * taken as one step; ArrowLeft / ArrowRight along that row. true when the
+ * key was one. */
 function titleArrow(menu, ev) {
+  const a = document.activeElement, row = a && menu.contains(a) && a.parentElement !== menu ? [...a.parentElement.querySelectorAll("button")] : [];
+  if (row.length > 1 && (ev.key === "ArrowLeft" || ev.key === "ArrowRight")) {
+    ev.preventDefault();
+    row[(row.indexOf(a) + (ev.key === "ArrowRight" ? 1 : -1) + row.length) % row.length].focus();
+    return true;
+  }
   if (ev.key !== "ArrowDown" && ev.key !== "ArrowUp") return false;
-  const bs = [...menu.querySelectorAll("button")], i = bs.indexOf(document.activeElement);
+  const bs = [...menu.querySelectorAll("button")], down = ev.key === "ArrowDown";
+  const i = row.length > 1 ? bs.indexOf(down ? row[row.length - 1] : row[0]) : bs.indexOf(a);
   ev.preventDefault();
-  bs[(i + (ev.key === "ArrowDown" ? 1 : -1) + bs.length) % bs.length].focus();
+  bs[(i + (down ? 1 : -1) + bs.length) % bs.length].focus();
   return true;
 }
 
@@ -307,8 +366,12 @@ function dialogSheet(title, text, yes, no) {
 /**
  * The title screen, into host.
  *   name      the game's name
+ *   lines     optional: the name's lines, as ["Raid on", "Puma Bay"]; the
+ *             second wears --gk-title-hi. Left out, the name breaks itself.
+ *   sub       optional: a line under the name, as "Behind Enemy Lines"
  *   items     the menu, top to bottom: { act, label, key, meta? }, or "gap"
- *             before Settings / Help / About; anything falsy is left out
+ *             before Settings / Help / About, which share one row; anything
+ *             falsy is left out
  *   primary   the act that is the default (lit, and focused)
  *   scene(el) draws the game's backdrop into el
  *   help      [[tab, html], ...]   about: html
