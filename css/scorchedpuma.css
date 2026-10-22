@@ -148,6 +148,31 @@ a { color: var(--steel); }
 #snd.muted .off { display: inline; }
 /* a narrower desktop: the key hints and the faction tag go first */
 @media (max-width: 1240px) { #console kbd, #console .side { display: none; } .c-who { flex-basis: 160px; } #c-fuel .long { display: none; } #c-fuel .short { display: inline; } .c-wind { flex-basis: 96px; } .dial { min-width: 140px; } .c-act { flex-basis: 170px; } }
+/* a phone held sideways, or a window under 900px: the console in one row
+   down to 640px wide, and short, so the field over it keeps half size or
+   better (hud.js shrinks the tiles to the shorter well to match) */
+@media (max-width: 900px), (max-height: 479px) {
+  #console { min-height: 0; padding: 5px 2px; }
+  #console > section { padding: 0 5px; gap: 3px; }
+  #console .k { font-size: 10px; letter-spacing: .08em; }
+  .c-who { flex-basis: 112px; }
+  .c-who b { font-size: 13px; }
+  .c-sub, .c-drive { font-size: 11px; }
+  .c-aim { gap: 3px 6px; }
+  .dial { min-width: 92px; padding: 2px 2px 3px 6px; }
+  .dial .v { font-size: 20px; }
+  .c-last { font-size: 11px; gap: 4px; }
+  .c-last .k { display: none; }
+  .c-wind { flex-basis: 56px; }
+  .c-wind .v { font-size: 15px; }
+  .c-arms { min-width: 88px !important; }
+  .c-items { min-width: 56px !important; }
+  .well { height: 82px; }
+  .c-act { flex-basis: 96px; }
+  #c-fire { height: 40px; font-size: 14px; letter-spacing: .08em; }
+  /* the round is on the shop and the scoreboard; here the two buttons need the room */
+  #c-round { display: none; }
+}
 
 #stage { flex: 1; min-height: 0; position: relative; display: grid; place-items: center; background: var(--bg); }
 /* an edge for the field, so a black sky never runs into the bars beside it */
@@ -168,6 +193,13 @@ a { color: var(--steel); }
 #log b { font-weight: 600; color: var(--text); }
 #log .dmg { color: var(--warn); font-variant-numeric: tabular-nums; }
 #log .ko { color: var(--danger); text-transform: uppercase; letter-spacing: .08em; font-size: 11px; }
+/* a phone held sideways: the newest two lines, narrower, so the log covers
+   less of the field's left end and the tanks on it */
+@media (max-height: 479px) {
+  #log { top: calc(var(--fy, 0px) + 6px); left: calc(var(--fx, 0px) + 6px); max-width: 34%; gap: 2px; }
+  #log li { padding: 2px 7px; font-size: 11px; line-height: 1.35; }
+  #log li.old { display: none; }
+}
 #log .miss { color: var(--dim); }
 #log .paid, #log .cost { margin-left: 4px; font-variant-numeric: tabular-nums; }
 #log .paid { color: var(--good); }
@@ -177,6 +209,13 @@ a { color: var(--steel); }
 #coach { position: absolute; left: calc(var(--fx, 0px) + 14px); bottom: calc(var(--fy, 0px) + 14px); max-width: 46ch; padding: 12px 16px; background: rgba(10, 14, 26, .95); border: 1px solid var(--lit); border-radius: 3px;
   color: var(--ink); font-size: 13px; line-height: 1.55; pointer-events: none; box-shadow: 0 8px 24px rgba(0, 0, 0, .5); }
 #coach p + p { margin-top: 6px; }
+/* a phone held sideways: smaller, at the top of the field, and at the end
+   away from your tank (main.js sets .far-right when the tank is on the left) */
+@media (max-height: 479px) {
+  #coach { top: calc(var(--fy, 0px) + 6px); bottom: auto; left: calc(var(--fx, 0px) + 6px); max-width: 44%; padding: 7px 10px; font-size: 11px; line-height: 1.45; }
+  #coach.far-right { left: auto; right: calc(var(--fx, 0px) + 6px); }
+  #coach p + p { margin-top: 4px; }
+}
 #coach b { color: var(--text); font-weight: 600; }
 #coach kbd { color: var(--text); }
 /* the tanks' talk: page text in a layer over the field (render.js places it) */
@@ -200,6 +239,13 @@ body.on-title #game { visibility: hidden; }
 #title .gk-sub { font-size: 12px; letter-spacing: .14em; white-space: nowrap; }
 #title .gk-sub .p { color: var(--sp-puma); }
 #title .gk-sub .w { color: var(--sp-wolf); }
+/* a phone held sideways: the column starts higher and the credit follows
+   the menu instead of sitting over its foot */
+@media (max-height: 479px) {
+  #title .gk-title > main { padding-top: 14px; padding-bottom: 14px; }
+  #title .gk-menu { margin-top: 14px; }
+  #title .gk-title > footer { position: static; padding: 0 16px 14px var(--t-x, 16px); }
+}
 
 /* ---- sheets: Settings, Help, the shop and the rest, over the game or the title ---- */
 body > .gk-sheet { z-index: 100; }
@@ -280,7 +326,9 @@ dl.ais dd { color: var(--ink); margin: 0; }
 
 /* ---- the small-screen note ---- */
 #small { display: none; }
-@media (max-width: 759px), (max-height: 479px) {
+/* too narrow for the field and its console in one row: a phone held
+   upright (one held sideways plays), or a window that small */
+@media (max-width: 639px), (max-height: 299px) {
   #game, #title, .gk-boot { display: none !important; }
   #small { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 24px; text-align: center; line-height: 1.6; }
   #small h1 { font-size: 16px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
@@ -343,6 +391,37 @@ img.mini { display: inline-block; width: 24px; height: 24px; vertical-align: mid
 .gk-sheet .gk-box.picker { width: min(900px, 100%); }
 .gk-sheet table.list td.ic { width: 56px; }
 .card .slot { position: absolute; top: 6px; left: 6px; min-width: 18px; padding: 1px 5px; font-size: 12px; color: var(--ink); border: 1px solid var(--line); border-radius: 2px; background: var(--bg); }
+
+/* a phone held sideways: the shop on a short screen, so the shelf shows two
+   rows of cards whole and the picked one stays beside it */
+@media (max-height: 479px) {
+  body > .gk-sheet:has(.gk-box.shop) { padding: 6px; }
+  .gk-sheet .gk-box.shop { height: calc(100dvh - 12px); max-height: none; }
+  .gk-box.shop .gk-head { gap: 12px; padding: 8px 14px 0; }
+  .gk-box.shop .gk-head h2 { font-size: 15px; }
+  .gk-box.shop .gk-head .who { font-size: 13px; }
+  .gk-sheet .gk-box.shop .cash.big { font-size: 18px; }
+  .gk-box.shop .gk-tabs { padding: 6px 14px 0; }
+  .gk-box.shop .gk-tabs button { font-size: 12px; padding: 5px 14px; }
+  .gk-box.shop .gk-body { grid-template-columns: minmax(0, 1fr) 210px; gap: 10px; padding: 8px 14px; }
+  .gk-sheet .shelf h3 { margin: 10px 0 6px; font-size: 11px; }
+  .cards { grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 6px; }
+  .card { gap: 3px; padding: 6px 4px 5px; }
+  .card img.ico { width: 44px; height: 44px; }
+  .card .nm { font-size: 11px; min-height: 2.4em; }
+  .card .pr { font-size: 12px; }
+  .card .d { display: none; }
+  .detail { gap: 6px; padding: 8px 10px; }
+  .detail img.big { width: 64px; height: 64px; }
+  .detail h4 { font-size: 15px; }
+  .gk-sheet .detail .what { font-size: 12px; line-height: 1.4; }
+  .detail dl { gap: 3px 10px; font-size: 11px; padding: 6px 0; }
+  .detail button { padding: 8px; font-size: 13px; }
+  .gk-box.shop .gk-foot { padding: 6px 14px; gap: 8px; }
+  .gk-box.shop .gk-foot .grow { max-height: 40px; font-size: 11px; }
+  .gk-box.shop .gk-foot .primary { padding: 8px 18px; }
+  .gk-box.shop .gk-foot .grow button, .gk-box.shop .gk-foot [data-undo] { padding: 6px 10px; font-size: 12px; }
+}
 
 /* ---- the hover tip: the thing blown up, its name large, what it does ---- */
 #tip { position: fixed; z-index: 2147482000; width: 470px; display: flex; gap: 14px; align-items: flex-start; padding: 14px;
