@@ -92,8 +92,13 @@
      its room; when even 44 won't, the strip is a drawer: what fits shows,
      "+N" says how many more, and the pointer (or the focus) on it slides the
      whole set up over the foot of the field. */
-  const ROOM = 112, GAP = 4, BIG = 52, MIN = 44, PAD = 6;
+  const GAP = 4, PAD = 6;
+  /* the compact console (css: under 900px wide or 480px tall) has a shorter
+     well, 82px for 114: two rows of smaller tiles */
+  const COMPACT = matchMedia("(max-width: 900px), (max-height: 479px)");
+  let ROOM = 112, BIG = 52, MIN = 44;
   function fitStrip(el) {
+    [ROOM, BIG, MIN] = COMPACT.matches ? [80, 44, 36] : [112, 52, 44];
     const n = el.querySelectorAll(".wb, .ib").length, w = el.clientWidth - PAD * 2 - 2;
     if (w <= 0) return;
     const cols = z => Math.max(1, Math.floor((w + GAP) / (z + GAP)));

@@ -301,8 +301,14 @@
   function coach(t) {
     if (prefs.coached || game.test) return;
     const w = game.s.wind, wind = w === 0 ? "calm today" : `${Math.abs(w)} ${w < 0 ? "◀" : "▶"} now`;
-    H.coach(`<p><b>Your shot.</b> <kbd>←</kbd> <kbd>→</kbd> turn the turret, <kbd>↑</kbd> <kbd>↓</kbd> set the power, <kbd>Space</kbd> fires. Or press on the field and drag.</p>` +
+    /* a touchscreen has no keys: the field and the console's buttons are the controls */
+    const touch = matchMedia("(hover: none) and (pointer: coarse)").matches;
+    H.coach((touch
+      ? `<p><b>Your shot.</b> Press on the field and drag to aim, or use the arrows by Angle and Power. Fire shoots.</p>`
+      : `<p><b>Your shot.</b> <kbd>←</kbd> <kbd>→</kbd> turn the turret, <kbd>↑</kbd> <kbd>↓</kbd> set the power, <kbd>Space</kbd> fires. Or press on the field and drag.</p>`) +
       `<p>The arrow from your barrel is your aim, its angle and power at the tip. It is not where the shell lands: gravity pulls it down and the wind (${wind}) pushes it. Fire, then correct from the cross where it came down.</p>`);
+    /* on a short screen the note sits at the top of the field, at the end away from your tank */
+    $("coach").classList.toggle("far-right", t.x < game.s.terrain.w / 2);
   }
   function showScoreboard(ev) {
     const s = game.s;
@@ -594,7 +600,9 @@
   function fit() {
     const hud = $("console").offsetHeight || 96;
     const aw = innerWidth, ah = innerHeight - hud, fw = game.s ? game.s.terrain.w : SP.W;
-    const s0 = Math.max(0.5, Math.min(aw / fw, ah / SP.H)), si = Math.floor(s0);
+    /* the floor is low enough for a phone held sideways, where the room
+       over the console is under SP.H / 2: the field must never run under it */
+    const s0 = Math.max(0.3, Math.min(aw / fw, ah / SP.H)), si = Math.floor(s0);
     /* whole pixels only when that costs next to nothing: the field fills the window */
     const sc = si >= 1 && si / s0 > 0.97 ? si : s0;
     const cv = $("field"), w = Math.floor(fw * sc), h = Math.floor(SP.H * sc);
@@ -712,7 +720,7 @@
     syncSound();
     game.r = new SP.Renderer($("field"));
     const q = new URLSearchParams(location.search);
-    const small = matchMedia("(max-width: 759px), (max-height: 479px)").matches;
+    const small = matchMedia("(max-width: 639px), (max-height: 299px)").matches;
     const saved = SP.store.get(KEY_MATCH, null);
     const lines = [bootReloadLine(), "terrain: seeded", "puma arms: open"], more = [saved ? "a match in progress" : "wolf surplus: open"];
     /* the integrated intro, but not on a small screen (the page asks for a

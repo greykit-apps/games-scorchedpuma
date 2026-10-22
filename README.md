@@ -16,7 +16,7 @@ The options are 1.5's: rounds, cash, interest, arms level, scoring, wind, gravit
 
 ## Keys
 
-A desktop game for keyboard and mouse, in a window at least 760 × 480. <kbd>←</kbd> <kbd>→</kbd> turn the turret, <kbd>↑</kbd> <kbd>↓</kbd> set the power, <kbd>Space</kbd> fires; or press on the field to aim there and drag to fine-tune. With a Fuel Tank, <kbd>F</kbd> drives. <kbd>?</kbd> lists every key; <kbd>M</kbd> is sound.
+For keyboard and mouse in a window at least 640 × 300, or a phone held sideways. <kbd>←</kbd> <kbd>→</kbd> turn the turret, <kbd>↑</kbd> <kbd>↓</kbd> set the power, <kbd>Space</kbd> fires; or press on the field to aim there and drag to fine-tune. With a Fuel Tank, <kbd>F</kbd> drives. <kbd>?</kbd> lists every key; <kbd>M</kbd> is sound.
 
 ## Saves
 
